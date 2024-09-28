@@ -80,9 +80,9 @@ const authenticateToken = (req, res, next) => {
 // })
 
 const db = mysql.createPool({
-  host: 'paranworld.com',       // Your MySQL server host
+  host: 'srv1076.hstgr.io',       // Your MySQL server host
   user: 'u781068912_testDatabase',            // Your MySQL username
-  password: 'Johnhope@2002',            // Your MySQL password
+  password: '2*yKfs:1a',            // Your MySQL password
   database: 'u781068912_skinmiso',    // Your database name
   waitForConnections: true,
   connectTimeout: 20000, // Increase to 20 seconds
@@ -90,6 +90,23 @@ const db = mysql.createPool({
   connectionLimit: 10,     // Maximum number of connections in the pool
   queueLimit: 0            // Unlimited queueing for connections
 });
+
+async function testConnection() {
+  try {
+    const connection = await db.getConnection();
+    console.log('Database connection successful!');
+    
+    // Test a simple query
+    const [rows] = await connection.query('SELECT 1 + 1 AS solution');
+    console.log('Query result:', rows);
+
+    connection.release(); // Release the connection back to the pool
+  } catch (error) {
+    console.error('Database connection failed:', error.message);
+  }
+}
+
+testConnection();
 
 function generateRandomString(length = 10) {
   return crypto.randomBytes(length).toString('hex').slice(0, length);
