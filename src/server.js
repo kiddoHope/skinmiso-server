@@ -28,38 +28,6 @@ const limiter = rateLimit({
   max: 100, // Limit each IP to 100 requests per windowMs
   message: "Too many requests from this IP, please try again later."
 });
-// localhosting 
-// product
-const retrieveProduct = "http://localhost/skinmiso/product/retrieve_database.php";
-const insertProduct = "http://localhost/skinmiso/product/insert_database.php";
-const insertProductimage = "http://localhost/skinmiso/product/insert_image.php";
-const updateProduct = "http://localhost/skinmiso/product/update_database.php";
-const deleteProduct = "http://localhost/skinmiso/product/delete_database.php";
-// post
-const retrievePost = "http://localhost/skinmiso/post/retrieve_database.php";
-const retrieveComment = "http://localhost/skinmiso/post/retrieve_comment_database.php";
-const insertPost = "http://localhost/skinmiso/post/insert_database.php";
-const insertPostimage = "http://localhost/skinmiso/post/insert_image.php";
-const likePost = "http://localhost/skinmiso/post/like_database.php";
-const commentPost = "http://localhost/skinmiso/post/comment_database.php";
-const updatePost = "http://localhost/skinmiso/post/update_database.php";
-const deletePost = "http://localhost/skinmiso/post/delete_database.php";
-// cart
-const retrieveCart = "http://localhost/skinmiso/cart/retrieve_database.php";
-const insertCart = "http://localhost/skinmiso/cart/insert_database.php";
-const updateCart = "http://localhost/skinmiso/cart/update_database.php";
-const deleteCart = "http://localhost/skinmiso/cart/delete_database.php";
-// buyer
-const retrieveUser = "http://localhost/skinmiso/user/retrieve_database.php";
-const insertUser = "http://localhost/skinmiso/user/insert_database.php";
-const updateUser = "http://localhost/skinmiso/user/update_database.php";
-const authenticateUser = "http://localhost/skinmiso/user/authenticate.php";
-const logoutUser = "http://localhost/skinmiso/user/logout_database.php";  // logout user session
-// admin
-const retrieveAdmin = "http://localhost/skinmiso/admin/retrieve_database.php";
-const insertAdmin = "http://localhost/skinmiso/admin/insert_database.php";
-const updateAdmin = "http://localhost/skinmiso/admin/update_database.php";
-const authenticateAdmin = "http://localhost/skinmiso/admin/authenticate.php";
 
 // user data backend
 // Middleware to authenticate JWT token
@@ -113,9 +81,9 @@ const authenticateToken = (req, res, next) => {
 
 const db = mysql.createPool({
   host: 'localhost',       // Your MySQL server host
-  user: 'root',            // Your MySQL username
-  password: '',            // Your MySQL password
-  database: 'skinmiso',    // Your database name
+  user: 'u781068912_testDatabase',            // Your MySQL username
+  password: 'Johnhope@2002',            // Your MySQL password
+  database: 'u781068912_skinmiso',    // Your database name
   waitForConnections: true,
   connectionLimit: 10,     // Maximum number of connections in the pool
   queueLimit: 0            // Unlimited queueing for connections
