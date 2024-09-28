@@ -80,7 +80,7 @@ const authenticateToken = (req, res, next) => {
 // })
 
 const db = mysql.createPool({
-  host: 'localhost',       // Your MySQL server host
+  host: 'paranworld.com',       // Your MySQL server host
   user: 'u781068912_testDatabase',            // Your MySQL username
   password: 'Johnhope@2002',            // Your MySQL password
   database: 'u781068912_skinmiso',    // Your database name
