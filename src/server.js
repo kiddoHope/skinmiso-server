@@ -14,10 +14,11 @@ const port = 5000;
 const helmet = require('helmet');
 
 app.use(bodyParser.json());
-app.use(cors({
+app.use('*',cors({
   origin: ['https://skinmiso.com','http://localhost:3000','https://skinmiso.vercel.app'], // Allow only trusted domains
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token','x-requested-with']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token','x-requested-with'],
+  credentials: true, // Allow credentials (cookies, etc.) in CORS requests
 }));
 app.use(helmet());
 
