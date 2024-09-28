@@ -85,6 +85,8 @@ const db = mysql.createPool({
   password: 'Johnhope@2002',            // Your MySQL password
   database: 'u781068912_skinmiso',    // Your database name
   waitForConnections: true,
+  connectTimeout: 20000, // Increase to 20 seconds
+  port: 3306,                // Default MySQL port
   connectionLimit: 10,     // Maximum number of connections in the pool
   queueLimit: 0            // Unlimited queueing for connections
 });
