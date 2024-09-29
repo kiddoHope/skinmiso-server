@@ -15,10 +15,7 @@ const helmet = require('helmet');
 
 app.use(bodyParser.json());
 
-app.use(cors({
-  origin: 'http://localhost:3000', // Set to your specific origin
-  credentials: true // Allow credentials
-}));
+app.use(cors());
 
 
 // jwt secret
