@@ -14,9 +14,18 @@ const port = 5000;
 const helmet = require('helmet');
 
 app.use(express.static("client"));
-app.use(express.json());
+app.use(express.json({
+  type: ['application/json', 'text/plain']  // Accept JSON or plain text
+}));
 app.use(bodyParser.json());
-app.use(cors());
+app.use(cors({
+  origin: ['https://skinmiso.ca', 'https://www.skinmiso.ca', 'http://localhost:3000'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Authorization', 'Content-Type'],
+  credentials: true,
+}));
+
+app.options('*', cors());  // Preflight requests
 
 
 // jwt secret
