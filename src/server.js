@@ -196,7 +196,11 @@ app.post("/api/create-acc", limiter, [
 
     if (insertResult.affectedRows > 0) {
       const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
-      res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
+      console.log(authToken);
+      res.json({token: authToken, loginSession})
+      console.log('success', { success: true, message: "Customer registered successfully", token: authToken, loginSession });
+      
+      // res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
     } else {
       res.status(500).json({ success: false, message: 'Error registering user' });
     }
