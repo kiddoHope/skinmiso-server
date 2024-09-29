@@ -16,15 +16,15 @@ const helmet = require('helmet');
 app.use(bodyParser.json());
 const allowedOrigins = ['http://localhost:3000'];
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin, like mobile apps or curl requests
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    } else {
-      return callback(new Error('Not allowed by CORS'));
-    }
-  },
+  // origin: (origin, callback) => {
+  //   // Allow requests with no origin, like mobile apps or curl requests
+  //   if (!origin) return callback(null, true);
+  //   if (allowedOrigins.includes(origin)) {
+  //     return callback(null, true);
+  //   } else {
+  //     return callback(new Error('Not allowed by CORS'));
+  //   }
+  // },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With','Accept'],
   credentials: true, // Allow credentials (cookies, etc.) in CORS requests
@@ -196,11 +196,7 @@ app.post("/api/create-acc", limiter, [
 
     if (insertResult.affectedRows > 0) {
       const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
-      console.log(authToken);
-      res.json({token: authToken, loginSession})
-      console.log('success', { success: true, message: "Customer registered successfully", token: authToken, loginSession });
-      
-      // res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
+      res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
     } else {
       res.status(500).json({ success: false, message: 'Error registering user' });
     }
