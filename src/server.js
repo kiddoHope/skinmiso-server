@@ -26,7 +26,7 @@ app.use(cors({
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'x-requested-with'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With','Accept'],
   credentials: true, // Allow credentials (cookies, etc.) in CORS requests
 }));
 app.options('*', cors()); // Allow preflight requests for all routes
@@ -34,6 +34,7 @@ app.options('*', cors()); // Allow preflight requests for all routes
 
 // jwt secret
 const jwtSecret = process.env.REACT_APP_JWT_SECRET;
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
@@ -178,7 +179,7 @@ app.post("/api/create-acc", limiter, [
   body('customerID').notEmpty().withMessage('Customer ID is required.'),
   body('email').isEmail().withMessage('Invalid email format.'),
   body('mobileno').notEmpty().withMessage('Invalid mobile number.'),
-  body('username').notEmpty().withMessage('Username is required.'),
+  body('username').trim().escape().notEmpty().withMessage('Username is required.'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long.')
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -219,17 +220,24 @@ app.post("/api/create-acc", limiter, [
 
   // Insert data into database
   const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?)";
-  const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, activity, loginSession]);
 
-  if (insertResult.affectedRows > 0) {
-    const authToken = jwt.sign({ username }, jwtSecret, {
-      expiresIn: "7d",
-    });
-
-    res.json({ success: true, message: "Customer registered successfully", token: authToken, loginSession: loginSession });
-  } else {
-    res.status(500).json({ success: false, message: 'Error registering user' });
+  try {
+    const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, activity, loginSession]);
+  
+    if (insertResult.affectedRows > 0) {
+      const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
+      if (authToken) {
+        res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
+      } else {
+        res.status(200).json({ success: true, message: "Customer registered successfully but no auth", loginSession });
+      }
+    } else {
+      res.status(500).json({ success: false, message: 'Error registering user' });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
+  
 });
 
 // Logout endpoint
@@ -287,7 +295,7 @@ app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
     }
 
     const jsonDatapassed = [userData.user_customerID, userData.user_loginSession];
-    res.json(jsonDatapassed);
+    res.status(200).json(jsonDatapassed);
   } catch (error) {
     console.error('Database error:', error);
     return res.status(500).json({ success: false, message: 'Database connection failed' });
@@ -309,7 +317,7 @@ app.post("/api/user",authenticateToken,async (req, res) => {
     const cleanedUserData = userData.map(({ id, user_loginSession, user_password, user_role, ...rest }) => rest);
   
     if (cleanedUserData.length > 0) {
-      return res.json({ success: true, data: cleanedUserData });
+      return res.status(200).json({ success: true, data: cleanedUserData });
     } else {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
@@ -526,7 +534,7 @@ app.post('/api/product-info', async (req, res) => {
       products[product].shorts = shortsResults[0];
     }
     
-    res.json(products[product]);
+    res.status(200).json(products[product]);
   } catch (err) {
     console.error('Error fetching product info:', err.message);
     res.status(500).json({ error: err.message });
