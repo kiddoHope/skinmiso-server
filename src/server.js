@@ -61,35 +61,6 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-
-
-// create acc
-// app.post("/api/create-acc", (req,res) => {
-//     const { customerID, email, mobileno, username, password } = req.body;
-//     const userData = {
-//         customerID: customerID,
-//         email : email,
-//         mobileno : mobileno,
-//         username: username,
-//         password: password
-//     }
-//     const userDataJson = JSON.stringify(userData)
-//     axios.post(insertUser , userDataJson)
-//     .then((response) =>{
-//         if (response.data.success) {
-//             // Generate JWT token for the user
-//             const authToken = jwt.sign({ username }, jwtSecret, {
-//                 expiresIn: "7d",
-//             });
-
-//             res.json({ message: "Customer registered successfully", token: authToken, loginSession: response.data.loginSession });
-//         } else {
-//             res.json({ message: "Registration failed", error: response.data.message });
-//         }
-//     }).catch((error) => {
-//         // Log the error for debugging purposes
-//         res.json({ message: "Server error during registration", error: error.message });
-//     });
 // })
 
 const db = mysql.createPool({
@@ -225,7 +196,7 @@ app.post("/api/create-acc", limiter, [
     const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, activity, loginSession]);
     if (insertResult.affectedRows > 0) {
       const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
-      res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
+      res.json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
     } else {
       res.status(500).json({ success: false, message: 'Error registering user' });
     }
