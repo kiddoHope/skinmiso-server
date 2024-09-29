@@ -14,8 +14,11 @@ const port = 5000;
 const helmet = require('helmet');
 
 app.use(bodyParser.json());
-const allowedOrigins = ['http://localhost:3000'];
-app.use(cors());
+
+app.use(cors({
+  origin: 'http://localhost:3000', // Set to your specific origin
+  credentials: true // Allow credentials
+}));
 
 
 // jwt secret
@@ -186,7 +189,7 @@ app.post("/api/create-acc", limiter, [
     if (insertResult.affectedRows > 0) {
       const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
       const dataPassed = { success: true, message: "Customer registered successfully", token: authToken, loginSession }
-      
+
       console.log(dataPassed);
       
       res.status(200).json(dataPassed);
