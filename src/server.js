@@ -16,21 +16,21 @@ const helmet = require('helmet');
 app.use(bodyParser.json());
 
 const allowedOrigins = ['https://skinmiso.ca', 'http://localhost:3000', 'https://skinmiso.vercel.app'];
+app.options('*', cors()); // Allow preflight requests for all routes
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin, like mobile apps or curl requests
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    } else {
-      return callback(new Error('Not allowed by CORS'));
-    }
-  },
+  // origin: (origin, callback) => {
+  //   // Allow requests with no origin, like mobile apps or curl requests
+  //   if (!origin) return callback(null, true);
+  //   if (allowedOrigins.includes(origin)) {
+  //     return callback(null, true);
+  //   } else {
+  //     return callback(new Error('Not allowed by CORS'));
+  //   }
+  // },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With','Accept'],
   credentials: true, // Allow credentials (cookies, etc.) in CORS requests
 }));
-app.options('*', cors()); // Allow preflight requests for all routes
 
 
 // jwt secret
@@ -80,11 +80,6 @@ async function testConnection() {
   try {
     const connection = await db.getConnection();
     console.log('Database connection successful!');
-    
-    // Test a simple query
-    const [rows] = await connection.query('SELECT 1 + 1 AS solution');
-    console.log('Query result:', rows);
-
     connection.release(); // Release the connection back to the pool
   } catch (error) {
     console.error('Database connection failed:', error.message);
@@ -126,11 +121,13 @@ app.post("/api/login", limiter,[
         // Password matches, update login session
         const updateSessionSql = "UPDATE sk_customer_credentials SET user_loginSession = ?, user_activity = 'active' WHERE user_username = ?";
         const [updateResult] = await db.query(updateSessionSql, [loginSession, user.user_username]);
-
+        const userID = user.user_customerID
+        
         if (updateResult.affectedRows > 0) {
           // Generate JWT token for the user
           const authToken = jwt.sign({ username: user.user_username }, jwtSecret, { expiresIn: "7d" });
-          return res.status(200).json({ success: true, message: 'Login successful', loginSession, token: authToken });
+
+          return res.status(200).json({ success: true, message: 'Login successful', loginSession, token: authToken,userID });
         } else {
           return res.status(500).json({ success: false, message: 'Error creating session' });
         }
@@ -201,8 +198,6 @@ app.post("/api/create-acc", limiter, [
     
     if (insertResult.affectedRows > 0) {
       const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
-      console.log(authToken);
-      console.log({token: authToken, loginSession});
       
       res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
     } else {
@@ -263,13 +258,14 @@ app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
   try {
     const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
 
-    const userData = allusers.filter(user => user.user_customerID === req.user.username);
+    const userData = allusers.filter(user => user.user_username === req.user.username);
     
     if (!userData) {
       return res.status(404).json({ message: "User data not found" });
     }
 
-    const jsonDatapassed = [userData.user_customerID, userData.user_loginSession];
+    const jsonDatapassed = [userData[0].user_customerID, userData[0].user_loginSession];
+    
     res.status(200).json(jsonDatapassed);
   } catch (error) {
     console.error('Database error:', error);
