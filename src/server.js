@@ -14,20 +14,21 @@ const port = 5000;
 const helmet = require('helmet');
 
 app.use(bodyParser.json());
-
-// CORS configuration for all routes
-const corsOptions = {
-  origin: 'http://localhost:3000',  // Set your frontend origin here
-  methods: 'GET,POST,PUT,DELETE,OPTIONS', // Allowed HTTP methods
-  allowedHeaders: 'Authorization, Content-Type, x-access-token, x-requested-with', // Allowed headers
-  credentials: true // Allow credentials (cookies, authorization headers)
-};
-
-// Apply CORS middleware globally to all requests
-app.use(cors(corsOptions));
-
-// Handle preflight requests for all routes (OPTIONS)
-app.options('*', cors(corsOptions)); // Allow all OPTIONS requests
+const allowedOrigins = ['http://localhost:3000'];
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin, like mobile apps or curl requests
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With','Accept'],
+  credentials: true, // Allow credentials (cookies, etc.) in CORS requests
+}));
 
 
 // jwt secret
@@ -60,7 +61,6 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// })
 
 const db = mysql.createPool({
   host: 'srv1076.hstgr.io',       // Your MySQL server host
@@ -192,14 +192,10 @@ app.post("/api/create-acc", limiter, [
 
     // Insert data into database
     const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?)";
-
     const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, activity, loginSession]);
-
+    
     if (insertResult.affectedRows > 0) {
       const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
-      console.log(authToken);
-      
-
       res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
     } else {
       res.status(500).json({ success: false, message: 'Error registering user' });
@@ -299,7 +295,6 @@ app.post("/api/user",authenticateToken,async (req, res) => {
 });
 
 
-
 // products
 // products names only
 app.get("/api/products", async (req, res) => {
@@ -310,7 +305,7 @@ app.get("/api/products", async (req, res) => {
       const { id,sm_productID, ...rest } = prd;
       return rest;
     });
-    res.status(200).json(cleanedPrdnames)
+    res.json(cleanedPrdnames)
   } catch (error) {
     res.json(error)
   }
