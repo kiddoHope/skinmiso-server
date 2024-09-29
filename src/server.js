@@ -19,8 +19,8 @@ app.use(express.json({
 }));
 app.use(bodyParser.json());
 app.use(cors({
-  origin: ['https://skinmiso.ca', 'https://www.skinmiso.ca', 'http://localhost:3000'],
-  methods: ['GET', 'POST', 'OPTIONS'],
+  // origin: ['https://skinmiso.ca', 'https://www.skinmiso.ca', 'http://localhost:3000'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Authorization', 'Content-Type'],
   credentials: true,
 }));
