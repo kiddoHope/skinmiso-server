@@ -33,7 +33,9 @@ app.options('*', cors()); // Allow preflight requests for all routes
 
 
 // jwt secret
-const jwtSecret = process.env.REACT_APP_JWT_SECRET;
+// const jwtSecret = process.env.REACT_APP_JWT_SECRET;
+// jwt secret
+const jwtSecret = 'ngekNB082WjQXYBe182Q5p1CbBWc7uDS+S4Axf39zt+aobMcfT7WN4XMEkfzAFtT7TOwZGcGKEkdfRDvvSOV7A==';
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
