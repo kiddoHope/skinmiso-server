@@ -2,7 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const jwt = require("jsonwebtoken");
 const mysql = require('mysql2/promise')
-// const cors = require("cors");
+const cors = require("cors");
 const { body, validationResult } = require('express-validator');
 require('dotenv').config();
 
@@ -14,46 +14,24 @@ const port = 5000;
 const helmet = require('helmet');
 
 app.use(bodyParser.json());
-// const allowedOrigins = ['http://localhost:3000', 'https://skinmiso.vercel.app'];
-// app.use(cors({
-//   origin: (origin, callback) => {
-//     // Allow requests with no origin, like mobile apps or curl requests
-//     if (!origin) return callback(null, true);
-//     if (allowedOrigins.includes(origin)) {
-//       return callback(null, true);
-//     } else {
-//       return callback(new Error('Not allowed by CORS'));
-//     }
-//   },
-//   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-//   allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With','Accept'],
-//   credentials: true, // Allow credentials (cookies, etc.) in CORS requests
-// }));
-// app.options('*', cors()); // Allow preflight requests for all routes
-// Middleware to set CORS headers
-app.use((req, res, next) => {
-  // const allowedOrigins = ['http://localhost:3000', 'https://skinmiso.ca', 'https://skinmiso.vercel.app'];
+const allowedOrigins = ['https://skinmiso.ca', 'http://localhost:3000', 'https://skinmiso.vercel.app'];
+app.use(cors({
+  // origin: (origin, callback) => {
+  //   // Allow requests with no origin, like mobile apps or curl requests
+  //   if (!origin) return callback(null, true);
+  //   if (allowedOrigins.includes(origin)) {
+  //     return callback(null, true);
+  //   } else {
+  //     return callback(new Error('Not allowed by CORS'));
+  //   }
+  // },
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With','Accept'],
+  credentials: true, // Allow credentials (cookies, etc.) in CORS requests
+}));
+app.options('*', cors()); // Allow preflight requests for all routes
 
-  // // Get the origin of the request
-  // const origin = req.headers.origin;
-
-  // // Check if the origin is in the allowed list
-  // if (allowedOrigins.includes(origin)) {
-  //     res.set('Access-Control-Allow-Origin', 'http://localhost:3000'); // Set the origin
-  // }
-  
-  res.set('Access-Control-Allow-Origin', 'http://localhost:3000'); // Set the origin
-  res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE'); // Specify allowed methods
-  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization','x-access-token', 'X-Requested-With'); // Specify allowed headers
-  res.set('Access-Control-Allow-Credentials', 'true'); // Allow credentials (cookies, etc.)
-
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-      return res.sendStatus(204); // No Content
-  }
-
-  next(); // Proceed to the next middleware or route handler
-});
 
 // jwt secret
 // const jwtSecret = process.env.REACT_APP_JWT_SECRET;
