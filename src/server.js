@@ -319,9 +319,9 @@ app.get("/api/products", async (req, res) => {
 // product data
 // Fetch specific product info based on product name
 app.post('/api/product-info', async (req, res) => {
-  const { product } = req.body;  // Extract the product name from the request body
+  const { productName } = req.body;  // Extract the product name from the request body
 
-  if (!product) {
+  if (!productName) {
     return res.status(400).json({ error: "Product name is required" });
   }
 
@@ -331,31 +331,31 @@ app.post('/api/product-info', async (req, res) => {
 
     const connection = await db.getConnection(); // Get a connection from the pool
     // Fetch the specific product by name
-    const [productResults] = await connection.query('SELECT * FROM sk_products WHERE sm_product_name = ?', [product]);
+    const [productResults] = await connection.query('SELECT * FROM sk_products WHERE sm_product_name = ?', [productName]);
     if (productResults.length > 0) {
-      products[product] = productResults[0];
+      products[productName] = productResults[0];
     }
     
 
     // Fetch associated images
-    const [imgsResults] = await connection.query('SELECT * FROM sk_product_imgs WHERE sm_product_name = ?', [product]);
+    const [imgsResults] = await connection.query('SELECT * FROM sk_product_imgs WHERE sm_product_name = ?', [productName]);
     if (imgsResults.length > 0) {
-      products[product].images = imgsResults[0];
+      products[productName].images = imgsResults[0];
     }
 
     // Fetch associated info
-    const [infoResults] = await connection.query('SELECT * FROM sk_product_info WHERE sm_product_name = ?', [product]);
+    const [infoResults] = await connection.query('SELECT * FROM sk_product_info WHERE sm_product_name = ?', [productName]);
     if (infoResults.length > 0) {
-      products[product].info = infoResults[0];
+      products[productName].info = infoResults[0];
     }
 
     // Fetch associated shorts
-    const [shortsResults] = await connection.query('SELECT * FROM sk_product_shorts WHERE sm_product_name = ?', [product]);
+    const [shortsResults] = await connection.query('SELECT * FROM sk_product_shorts WHERE sm_product_name = ?', [productName]);
     if (shortsResults.length > 0) {
-      products[product].shorts = shortsResults[0];
+      products[productName].shorts = shortsResults[0];
     }
     
-    res.status(200).json(products[product]);
+    res.status(200).json(products[productName]);
   } catch (err) {
     console.error('Error fetching product info:', err.message);
     res.status(500).json({ error: err.message });
