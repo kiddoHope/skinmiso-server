@@ -25,7 +25,6 @@ app.use(cors({
   //     return callback(new Error('Not allowed by CORS'));
   //   }
   // },
-  origin: 'http://localhost:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With','Accept'],
   credentials: true, // Allow credentials (cookies, etc.) in CORS requests
