@@ -13,16 +13,10 @@ const app = express();
 const port = 5000;
 const helmet = require('helmet');
 
+app.use(express.static("client"));
+app.use(express.json());
 app.use(bodyParser.json());
-
-const allowedOrigins = ['https://skinmiso.vercel.app'];
-app.use(cors({
-  credentials: true, // Allow credentials like cookies
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With','Accept']
-}));
-
-app.options('/api/*', cors());
+app.use(cors());
 
 
 // jwt secret
