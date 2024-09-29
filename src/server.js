@@ -14,7 +14,7 @@ const port = 5000;
 const helmet = require('helmet');
 
 app.use(bodyParser.json());
-const allowedOrigins = ['https://skinmiso.ca', 'http://localhost:3000', 'https://skinmiso.vercel.app'];
+const allowedOrigins = ['http://localhost:3000'];
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin, like mobile apps or curl requests
