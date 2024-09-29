@@ -184,57 +184,58 @@ app.post("/api/create-acc", limiter, [
   body('username').trim().escape().notEmpty().withMessage('Username is required.'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long.')
 ], async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
-  }
-
-  const { customerID, email, mobileno, username, password } = req.body;
-
-  // Check if username already exists
-  const usernameCheckSql = "SELECT * FROM sk_customer_credentials WHERE user_username = ?";
-  const [usernameCheckResults] = await db.query(usernameCheckSql, [username]);
-  if (usernameCheckResults.length > 0) {
-    return res.status(400).json({ success: false, message: 'Username already exists' });
-  }
-
-  // Check if email already exists
-  const emailCheckSql = "SELECT * FROM sk_customer_credentials WHERE user_email = ?";
-  const [emailCheckResults] = await db.query(emailCheckSql, [email]);
-  if (emailCheckResults.length > 0) {
-    return res.status(400).json({ success: false, message: 'Email already exists' });
-  }
-
-  // If mobileno is not "no phone added", check if it already exists
-  if (mobileno !== "no phone added") {
-    const mobileCheckSql = "SELECT * FROM sk_customer_credentials WHERE user_mobileno = ?";
-    const [mobileCheckResults] = await db.query(mobileCheckSql, [mobileno]);
-    if (mobileCheckResults.length > 0) {
-      return res.status(400).json({ success: false, message: 'Mobile number already exists' });
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
     }
-  }
 
-  // Hash the password
-  const hash_pass = await bcrypt.hash(password, 10);
-  const generatedSession = generateRandomString(10);
-  const loginSession = 'sknms' + generatedSession + 'log';
-  const activity = 'active';
+    const { customerID, email, mobileno, username, password } = req.body;
 
-  // Insert data into database
-  const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    // Check if username already exists
+    const usernameCheckSql = "SELECT * FROM sk_customer_credentials WHERE user_username = ?";
+    const [usernameCheckResults] = await db.query(usernameCheckSql, [username]);
+    if (usernameCheckResults.length > 0) {
+      return res.status(400).json({ success: false, message: 'Username already exists' });
+    }
 
-  const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, activity, loginSession]);
-  if (insertResult.affectedRows > 0) {
-    const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
-    if (authToken) {
+    // Check if email already exists
+    const emailCheckSql = "SELECT * FROM sk_customer_credentials WHERE user_email = ?";
+    const [emailCheckResults] = await db.query(emailCheckSql, [email]);
+    if (emailCheckResults.length > 0) {
+      return res.status(400).json({ success: false, message: 'Email already exists' });
+    }
+
+    // If mobileno is not "no phone added", check if it already exists
+    if (mobileno !== "no phone added") {
+      const mobileCheckSql = "SELECT * FROM sk_customer_credentials WHERE user_mobileno = ?";
+      const [mobileCheckResults] = await db.query(mobileCheckSql, [mobileno]);
+      if (mobileCheckResults.length > 0) {
+        return res.status(400).json({ success: false, message: 'Mobile number already exists' });
+      }
+    }
+
+    // Hash the password
+    const hash_pass = await bcrypt.hash(password, 10);
+    const generatedSession = generateRandomString(10);
+    const loginSession = 'sknms' + generatedSession + 'log';
+    const activity = 'active';
+
+    // Insert data into database
+    const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, activity, loginSession]);
+    if (insertResult.affectedRows > 0) {
+      const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
       res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
     } else {
-      res.status(200).json({ success: true, message: "Customer registered successfully but no auth", loginSession });
+      res.status(500).json({ success: false, message: 'Error registering user' });
     }
-  } else {
-    res.status(500).json({ success: false, message: 'Error registering user' });
+  } catch (error) {
+    console.error(error); // Log the error for debugging
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 });
+
 
 // Logout endpoint
 app.post("/api/logout", authenticateToken, async (req, res) => {
