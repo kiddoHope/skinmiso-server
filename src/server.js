@@ -14,21 +14,23 @@ const port = 5000;
 const helmet = require('helmet');
 
 app.use(bodyParser.json());
+
 const allowedOrigins = ['https://skinmiso.vercel.app'];
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin, like mobile apps or curl requests
-    if (!origin) return callback(null, true);
+    if (!origin) return callback(null, true); // Allow requests with no origin
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     } else {
       return callback(new Error('Not allowed by CORS'));
     }
   },
+  credentials: true, // Allow credentials like cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With','Accept'],
-  credentials: true, // Allow credentials (cookies, etc.) in CORS requests
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With','Accept']
 }));
+
+app.options('/api/*', cors());
 
 
 // jwt secret
@@ -94,6 +96,7 @@ testConnection();
 function generateRandomString(length = 10) {
   return crypto.randomBytes(length).toString('hex').slice(0, length);
 }
+
 
 // Login endpoint
 app.post("/api/login", limiter,[
