@@ -13,14 +13,24 @@ const app = express();
 const port = 5000;
 const helmet = require('helmet');
 
-app.use(express.static("client"));
-app.use(express.json({
-  type: ['application/json', 'text/plain']  // Accept JSON or plain text
-}));
 app.use(bodyParser.json());
-app.options('*', cors());  // Preflight requests
 
-app.use(cors());
+const allowedOrigins = ['https://skinmiso.ca', 'http://localhost:3000', 'https://skinmiso.vercel.app'];
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin, like mobile apps or curl requests
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With','Accept'],
+  credentials: true, // Allow credentials (cookies, etc.) in CORS requests
+}));
+app.options('*', cors()); // Allow preflight requests for all routes
 
 
 // jwt secret
