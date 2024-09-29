@@ -180,9 +180,13 @@ app.post("/api/create-acc", limiter, [
 
     // Insert data into database
     const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?)";
+
     const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, activity, loginSession]);
+
     if (insertResult.affectedRows > 0) {
       const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
+      console.log(authToken);
+      
       res.json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
     } else {
       res.status(500).json({ success: false, message: 'Error registering user' });
@@ -281,155 +285,6 @@ app.post("/api/user",authenticateToken,async (req, res) => {
   }
 });
 
-
-// user cart
-
-// app.post("/api/user-cart", (req, res) => {
-//   const { customerId } = req.body; 
-
-//   axios.get(retrieveCart)
-//     .then((response) => {
-//       const cartsData = response.data;
-//       const userCart = cartsData.filter(u => u.customerID === customerId);
-
-//       if (userCart.length === 0) {
-//         return res.status(404).json({ message: "User cart data not found" });
-//       }
-
-//       res.status(200).json(userCart);
-//     })
-//     .catch((error) => {
-//       console.error("Error fetching user cart data:", error.response ? error.response.data.error : error.message);
-//       res.status(500).json({ message: "Internal server error" });
-//     });
-// });
-
-// fetch post
-
-// all post
-// app.post("/api/all-post", async (req, res) => {
-//   const { customerID } = req.body;
-//   await fetchPosts(res, customerID);
-// });
-
-// Function to calculate time difference
-// const calculateTimeDifference = (registeredTimestamp) => {
-//   const currentTime = new Date();
-//   const registeredTime = new Date(registeredTimestamp);
-
-//   const differenceInMilliseconds = currentTime - registeredTime;
-
-//   const differenceInSeconds = Math.floor(differenceInMilliseconds / 1000);
-//   const differenceInMinutes = Math.floor(differenceInSeconds / 60);
-//   const differenceInHours = Math.floor(differenceInMinutes / 60);
-//   const differenceInDays = Math.floor(differenceInHours / 24);
-//   const differenceInWeeks = Math.floor(differenceInDays / 7);
-
-//   if (differenceInWeeks > 0) {
-//     const options = { year: "numeric", month: "short", day: "numeric" };
-//     return registeredTime.toLocaleDateString(undefined, options);
-//   } else if (differenceInDays > 0) {
-//     return `${differenceInDays} day${differenceInDays > 1 ? "s" : ""} ago`;
-//   } else if (differenceInHours > 0) {
-//     return `${differenceInHours} hour${differenceInHours > 1 ? "s" : ""} ago`;
-//   } else if (differenceInMinutes > 0) {
-//     return `${differenceInMinutes} minute${differenceInMinutes > 1 ? "s" : ""} ago`;
-//   } else {
-//     return `${differenceInSeconds} second${differenceInSeconds > 1 ? "s" : ""} ago`;
-//   }
-// };
-
-// async function fetchPosts(res, customerID) {
-//   try {
-//     const [userDataResponse, postDataResponse, commentDataResponse] = await Promise.all([
-//       fetch(retrieveUser),
-//       fetch(retrievePost),
-//       fetch(retrieveComment)
-//     ]);
-
-//     const userData = await userDataResponse.json();
-//     const postData = await postDataResponse.json();
-//     const commentData = await commentDataResponse.json();
-
-//     const mappedPosts = postData.map((post) => {
-//       const userDataForPost = userData.find(user => user.customerID === post.customerID);
-//       if (!userDataForPost) {
-//         console.error(`No user data found for post with customerID: ${post.customerID}`);
-//       }
-//       const timeDiff = calculateTimeDifference(post.timestamp);
-//       const likesData = JSON.parse(post.likes);
-//       const likeCount = likesData.likeCount || 0; // Get the like count
-//       const likedBy = Array.isArray(likesData.likedBy) ? likesData.likedBy : [];
-//       let isLiked = false;
-//       if (customerID) {
-//         isLiked = likedBy.includes(customerID);
-//       }
-      
-//       // Format created timestamp into readable format
-//       const formattedCreated = new Date(userDataForPost.created).toLocaleDateString('en-US', {
-//         year: 'numeric',
-//         month: 'long',
-//         day: 'numeric'
-//       });
-
-//       // Find comments for the current post
-//       const commentsForPost = commentData
-//         .filter(comment => comment.postID === post.postID)
-//         .map(comment => {
-          
-//           const timeDiff = calculateTimeDifference(comment.timestamp);
-//           const userDataForComment = userData.find(user => user.customerID === comment.customerID);
-//           if (!userDataForComment) {
-//             console.error(`No user data found for comment with customerID: ${comment.customerID}`);
-//           }
-//           return {
-//             ...comment,
-//             timeDiffcom: timeDiff,
-//             userData: userDataForComment
-//           };
-//         });
-
-//       return {
-//         ...post,
-//         userData: {
-//           ...userDataForPost,
-//           formattedCreated: formattedCreated // Add formatted created date to userData
-//         },
-//         timeDifference: timeDiff,
-//         likes: likeCount, // Update like count
-//         isLiked: isLiked,
-//         likedBy, // store likedBy to use it elsewhere, but don't render it directly
-//         comments: commentsForPost // Add comments to the post
-//       };
-//     });
-
-//     const sortedPosts = mappedPosts.sort((a, b) => {
-//       const timestampA = new Date(a.timestamp).getTime();
-//       const timestampB = new Date(b.timestamp).getTime();
-//       return timestampB - timestampA;
-//     });
-
-//     if (sortedPosts.length === 0) {
-//       res.json("no post");
-//     } else {
-//       res.json(sortedPosts);
-//     }
-//   } catch (error) {
-//     console.error('Error fetching data:', error);
-//     res.status(500).json({ error: 'Internal Server Error' });
-//   }
-// }
-
-// like post
-// app.post("/api/like", async (req, res) => {
-//   const { likeData } = req.body;
-//   axios.post(likePost, likeData)
-//   .then((response) => {
-//     res.json(response.data)
-//   }).catch((error) => {
-//     res.status(500).json(error)
-//   })
-// });
 
 
 // products
