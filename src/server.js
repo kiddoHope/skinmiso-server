@@ -15,7 +15,19 @@ const helmet = require('helmet');
 
 app.use(bodyParser.json());
 
-app.use(cors());
+// CORS configuration for all routes
+const corsOptions = {
+  origin: 'http://localhost:3000',  // Set your frontend origin here
+  methods: 'GET,POST,PUT,DELETE,OPTIONS', // Allowed HTTP methods
+  allowedHeaders: 'Authorization, Content-Type, x-access-token, x-requested-with', // Allowed headers
+  credentials: true // Allow credentials (cookies, authorization headers)
+};
+
+// Apply CORS middleware globally to all requests
+app.use(cors(corsOptions));
+
+// Handle preflight requests for all routes (OPTIONS)
+app.options('*', cors(corsOptions)); // Allow all OPTIONS requests
 
 
 // jwt secret
