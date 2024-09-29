@@ -13,8 +13,18 @@ const app = express();
 const port = 5000;
 const helmet = require('helmet');
 
+const { createProxyMiddleware } = require('http-proxy-middleware');
+
 app.use(bodyParser.json());
-const allowedOrigins = ['https://skinmiso.ca', 'http://localhost:3000', 'https://skinmiso.vercel.app'];
+
+
+// CORS configuration
+const allowedOrigins = [
+  'https://skinmiso.ca', 
+  'http://localhost:3000', 
+  'https://skinmiso.vercel.app'
+];
+
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin, like mobile apps or curl requests
@@ -26,11 +36,19 @@ app.use(cors({
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With','Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With', 'Accept'],
   credentials: true, // Allow credentials (cookies, etc.) in CORS requests
 }));
-app.options('*', cors()); // Allow preflight requests for all routes
 
+// Allow preflight requests for all routes
+app.options('*', cors());
+
+// Proxy middleware for API requests
+app.use('/api', createProxyMiddleware({
+  target: 'https://skinmiso.ca',
+  changeOrigin: true,
+  secure: true, // Set to true if your SSL certificate is valid
+}));
 
 // jwt secret
 const jwtSecret = process.env.REACT_APP_JWT_SECRET;
