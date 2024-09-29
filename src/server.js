@@ -185,9 +185,11 @@ app.post("/api/create-acc", limiter, [
 
     if (insertResult.affectedRows > 0) {
       const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
-      console.log(authToken);
+      const dataPassed = { success: true, message: "Customer registered successfully", token: authToken, loginSession }
       
-      res.json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
+      console.log(dataPassed);
+      
+      res.status(200).json(dataPassed);
     } else {
       res.status(500).json({ success: false, message: 'Error registering user' });
     }
@@ -297,7 +299,7 @@ app.get("/api/products", async (req, res) => {
       const { id,sm_productID, ...rest } = prd;
       return rest;
     });
-    res.json(cleanedPrdnames)
+    res.status(200).json(cleanedPrdnames)
   } catch (error) {
     res.json(error)
   }
