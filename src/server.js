@@ -18,9 +18,9 @@ app.use(express.json({
   type: ['application/json', 'text/plain']  // Accept JSON or plain text
 }));
 app.use(bodyParser.json());
-app.use(cors());
-
 app.options('*', cors());  // Preflight requests
+
+app.use(cors());
 
 
 // jwt secret
