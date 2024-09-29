@@ -32,16 +32,17 @@ app.use(bodyParser.json());
 // app.options('*', cors()); // Allow preflight requests for all routes
 // Middleware to set CORS headers
 app.use((req, res, next) => {
-  const allowedOrigins = ['http://localhost:3000', 'https://skinmiso.ca', 'https://skinmiso.vercel.app'];
+  // const allowedOrigins = ['http://localhost:3000', 'https://skinmiso.ca', 'https://skinmiso.vercel.app'];
 
-  // Get the origin of the request
-  const origin = req.headers.origin;
+  // // Get the origin of the request
+  // const origin = req.headers.origin;
 
-  // Check if the origin is in the allowed list
-  if (allowedOrigins.includes(origin)) {
-      res.set('Access-Control-Allow-Origin', origin); // Set the origin
-  }
+  // // Check if the origin is in the allowed list
+  // if (allowedOrigins.includes(origin)) {
+  //     res.set('Access-Control-Allow-Origin', 'http://localhost:3000'); // Set the origin
+  // }
   
+  res.set('Access-Control-Allow-Origin', 'http://localhost:3000'); // Set the origin
   res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE'); // Specify allowed methods
   res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization','x-access-token', 'X-Requested-With'); // Specify allowed headers
   res.set('Access-Control-Allow-Credentials', 'true'); // Allow credentials (cookies, etc.)
