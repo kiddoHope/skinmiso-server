@@ -25,7 +25,7 @@ app.use(cors({
       return callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With','Accept'],
   credentials: true, // Allow credentials (cookies, etc.) in CORS requests
 }));
@@ -193,7 +193,7 @@ app.post("/api/create-acc", limiter, [
     // Insert data into database
     const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?)";
     const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, activity, loginSession]);
-    
+
     if (insertResult.affectedRows > 0) {
       const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
       res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
