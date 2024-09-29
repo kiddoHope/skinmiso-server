@@ -143,7 +143,7 @@ app.post("/api/create-acc", limiter, [
   body('customerID').notEmpty().withMessage('Customer ID is required.'),
   body('email').isEmail().withMessage('Invalid email format.'),
   body('mobileno').notEmpty().withMessage('Invalid mobile number.'),
-  body('username').trim().escape().notEmpty().withMessage('Username is required.'),
+  body('username').notEmpty().withMessage('Username is required.'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long.')
 ], async (req, res) => {
   try {
