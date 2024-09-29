@@ -146,7 +146,7 @@ app.post("/api/login", limiter,[
 });
 
 // create account
-app.post("/api/create-acc", limiter, [
+app.post("/api/register-acc", limiter, [
   body('customerID').notEmpty().withMessage('Customer ID is required.'),
   body('email').isEmail().withMessage('Invalid email format.'),
   body('mobileno').notEmpty().withMessage('Invalid mobile number.'),
