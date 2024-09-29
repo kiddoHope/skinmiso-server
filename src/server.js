@@ -29,7 +29,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With','Accept'],
   credentials: true, // Allow credentials (cookies, etc.) in CORS requests
 }));
-app.options('*', cors()); // Allow preflight requests for all routes
 
 
 // jwt secret
