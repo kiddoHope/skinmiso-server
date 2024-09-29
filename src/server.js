@@ -221,23 +221,17 @@ app.post("/api/create-acc", limiter, [
   // Insert data into database
   const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-  try {
-    const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, activity, loginSession]);
-  
-    if (insertResult.affectedRows > 0) {
-      const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
-      if (authToken) {
-        res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
-      } else {
-        res.status(200).json({ success: true, message: "Customer registered successfully but no auth", loginSession });
-      }
+  const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, activity, loginSession]);
+  if (insertResult.affectedRows > 0) {
+    const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
+    if (authToken) {
+      res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
     } else {
-      res.status(500).json({ success: false, message: 'Error registering user' });
+      res.status(200).json({ success: true, message: "Customer registered successfully but no auth", loginSession });
     }
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  } else {
+    res.status(500).json({ success: false, message: 'Error registering user' });
   }
-  
 });
 
 // Logout endpoint
