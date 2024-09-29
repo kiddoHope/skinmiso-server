@@ -19,8 +19,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true, // Allow credentials (cookies, etc.) in CORS requests
 }));
-app.options('*', cors()); // Allow preflight requests for all routes
-
 
 // jwt secret
 // const jwtSecret = process.env.REACT_APP_JWT_SECRET;
