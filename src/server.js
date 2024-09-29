@@ -17,14 +17,6 @@ app.use(bodyParser.json());
 
 const allowedOrigins = ['https://skinmiso.vercel.app'];
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // Allow requests with no origin
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    } else {
-      return callback(new Error('Not allowed by CORS'));
-    }
-  },
   credentials: true, // Allow credentials like cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With','Accept']
