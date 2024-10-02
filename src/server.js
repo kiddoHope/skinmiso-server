@@ -5,8 +5,6 @@ const mysql = require('mysql2/promise')
 const cors = require("cors");
 const { body, validationResult } = require('express-validator');
 require('dotenv').config();
-const axios = require('axios')
-
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit')
@@ -304,7 +302,7 @@ app.post("/api/user",authenticateToken,async (req, res) => {
 app.post("/api/create-fb", async (req,res) => {
   const {accessToken} = req.body;
   if (accessToken) {
-    const response = await axios.get(`https://graph.facebook.com/v20.0/me`, {
+    const response = await fetch(`https://graph.facebook.com/v20.0/me`, {
         params: {
           access_token: accessToken,
           fields: 'id,name,email,picture,first_name' // Specify the fields you want
@@ -386,7 +384,7 @@ app.post("/api/create-fb", async (req,res) => {
 
 app.post("/api/login-fb", async (req,res) => {
   const {accessToken} = req.body;
-  const response = await axios.get(`https://graph.facebook.com/v20.0/me`, {
+  const response = await fetch(`https://graph.facebook.com/v20.0/me`, {
     params: {
       access_token: accessToken,
       fields: 'id,name,email,picture,first_name' // Specify the fields you want
