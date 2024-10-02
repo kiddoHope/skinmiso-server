@@ -5,6 +5,7 @@ const mysql = require('mysql2/promise')
 const cors = require("cors");
 const { body, validationResult } = require('express-validator');
 require('dotenv').config();
+const axios = require('axios')
 
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
@@ -147,7 +148,6 @@ app.post("/api/login", limiter,[
 
 // create account
 app.post("/api/register-acc", limiter, [
-  body('customerID').notEmpty().withMessage('Customer ID is required.'),
   body('email').isEmail().withMessage('Invalid email format.'),
   body('mobileno').notEmpty().withMessage('Invalid mobile number.'),
   body('username').notEmpty().withMessage('Username is required.'),
@@ -159,7 +159,8 @@ app.post("/api/register-acc", limiter, [
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const { customerID, email, mobileno, username, password } = req.body;
+    const customerID = 'skms_' + generateRandomString(10)
+    const { email, mobileno, username, password } = req.body;
 
     // Check if username already exists
     const usernameCheckSql = "SELECT * FROM sk_customer_credentials WHERE user_username = ?";
@@ -187,19 +188,18 @@ app.post("/api/register-acc", limiter, [
     // Hash the password
     const hash_pass = await bcrypt.hash(password, 10);
     const generatedSession = generateRandomString(10);
+    const userRole = 'customer'
     const loginSession = 'sknms' + generatedSession + 'log';
     const activity = 'active';
 
     // Insert data into database
-    const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?)";
-    const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, activity, loginSession]);
-
-    console.log('insert data');
+      const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_role, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+      const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, userRole, activity, loginSession]);
     
     if (insertResult.affectedRows > 0) {
       const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
       
-      res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
+      res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession, customerID });
     } else {
       res.status(500).json({ success: false, message: 'Error registering user' });
     }
@@ -299,6 +299,101 @@ app.post("/api/user",authenticateToken,async (req, res) => {
 });
 
 
+
+// fb login
+app.post("/api/create-fb", async (req,res) => {
+  const {accessToken} = req.body;
+  if (accessToken) {
+    const response = await axios.get(`https://graph.facebook.com/v20.0/me`, {
+        params: {
+          access_token: accessToken,
+          fields: 'id,name,email,picture,first_name' // Specify the fields you want
+        }})
+    const userRole = 'customer'
+    const fbConnected = 'connected'
+    const customerID = 'skms_' + generateRandomString(10)
+    const fbData = response.data
+    const email = fbData.email
+    const username = fbData.first_name
+    const mobileno = 'no phone added'
+    const hash_pass = '';
+    const generatedSession = generateRandomString(10);
+    const loginSession = 'sknms' + generatedSession + 'log';
+    const activity = 'active';
+    const fbID = fbData.id
+
+    
+    const emailCheckSql = "SELECT * FROM sk_customer_credentials WHERE user_email = ?";
+    const [emailCheckResults] = await db.query(emailCheckSql, [email]);
+    
+    
+    if (emailCheckResults.length > 0) {
+      const userID = emailCheckResults[0].user_customerID
+      // update db to connect to fb
+      console.log(userID);
+      try {
+        const updateData = "UPDATE sk_customer_credentials SET user_fb_connected = ? WHERE user_customerID = ?"
+        const [upDatedataresult] = await db.query(updateData, [fbConnected,userID])
+        
+        if (upDatedataresult.affectedRows > 0) {
+          const checkRegFB = "SELECT * FROM sk_customer_facebook WHERE user_customerID = ?";
+          const [checkRegFBResult] = await db.query(checkRegFB, [userID])
+          if (checkRegFBResult.length > 0) {
+            // push to login
+            res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession, userID });
+            return;
+          } else {
+            try {
+              const insertFBinfo = "INSERT INTO sk_customer_facebook (user_customerID, user_facebookID) VALUES (?, ?)";
+              const [insertFBData] = await db.query(insertFBinfo, [userID, fbID]);
+              if (insertFBData.affectedRows > 0) {
+                const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
+                res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession, customerID });
+                return;
+              }
+            } catch (error) {
+              console.log("error inserting fb id", error);
+            }
+          }
+        }
+      } catch (error) {
+        console.log("error updating customer credentials", error);
+      }
+    }
+    try {
+      const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_role, user_fb_connected, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, userRole,fbConnected, activity, loginSession]);
+      if (insertResult.affectedRows > 0) {
+        const insertFBinfo = "INSERT INTO sk_customer_facebook (user_customerID, user_facebookID) VALUES (?, ?)";
+        const [insertFBData] = await db.query(insertFBinfo, [customerID, fbID]);
+        if (insertFBData.affectedRows > 0) {
+          const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
+        
+          res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession, customerID });
+        } else {
+          res.status(500).json({ success: false, message: 'Error Registering Facebook Account'})
+        }
+      } else {
+        res.status(500).json({ success: false, message: 'Error registering user' });
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  } else {
+    console.log('no data receive');
+  }
+})
+
+app.post("/api/login-fb", async (req,res) => {
+  const {accessToken} = req.body;
+  const response = await axios.get(`https://graph.facebook.com/v20.0/me`, {
+    params: {
+      access_token: accessToken,
+      fields: 'id,name,email,picture,first_name' // Specify the fields you want
+    }})
+})
+
+
 // products
 // products names only
 app.get("/api/products", async (req, res) => {
@@ -316,7 +411,6 @@ app.get("/api/products", async (req, res) => {
 
 });
 
-// product data
 // Fetch specific product info based on product name
 app.post('/api/product-info', async (req, res) => {
   const { productName } = req.body;  // Extract the product name from the request body
