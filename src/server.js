@@ -10,7 +10,7 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit')
 const app = express();
 const port = 5000;
-import axios from "axios";
+const axios = require('axios')
 
 app.use(bodyParser.json());
 
