@@ -8,9 +8,11 @@ require('dotenv').config();
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit')
+const { jwtDecode } = require('jwt-decode')
 const app = express();
 const port = 5000;
 const axios = require('axios')
+const { OAuth2Client } = require('google-auth-library');
 
 app.use(bodyParser.json());
 
@@ -35,7 +37,8 @@ app.use(cors({
 // jwt secret
 // const jwtSecret = process.env.REACT_APP_JWT_SECRET;
 // jwt secret
-const jwtSecret = 'ngekNB082WjQXYBe182Q5p1CbBWc7uDS+S4Axf39zt+aobMcfT7WN4XMEkfzAFtT7TOwZGcGKEkdfRDvvSOV7A==';
+const jwtSecret = process.env.REACT_APP_JWT_SECRET
+const googleClientID = process.env.REACT_GOOGLE_CLIENT_ID
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -120,13 +123,12 @@ app.post("/api/login", limiter,[
         // Password matches, update login session
         const updateSessionSql = "UPDATE sk_customer_credentials SET user_loginSession = ?, user_activity = 'active' WHERE user_username = ?";
         const [updateResult] = await db.query(updateSessionSql, [loginSession, user.user_username]);
-        const userID = user.user_customerID
         
         if (updateResult.affectedRows > 0) {
           // Generate JWT token for the user
           const authToken = jwt.sign({ username: user.user_username }, jwtSecret, { expiresIn: "7d" });
 
-          return res.status(200).json({ success: true, message: 'Login successful', loginSession, token: authToken,userID });
+          return res.status(200).json({ success: true, message: 'Login successful', loginSession, token: authToken });
         } else {
           return res.status(500).json({ success: false, message: 'Error creating session' });
         }
@@ -197,7 +199,7 @@ app.post("/api/register-acc", limiter, [
     if (insertResult.affectedRows > 0) {
       const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
       
-      res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession, customerID });
+      res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
     } else {
       res.status(500).json({ success: false, message: 'Error registering user' });
     }
@@ -273,18 +275,26 @@ app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
 
 // current user
 app.post("/api/user",authenticateToken,async (req, res) => {
-  const { userid } = req.body
+  const { userAuth } = req.body
 
-  if (!userid) {
-    return res.status(400).json({ success: false, message: 'customer id is required' });
+  if (!userAuth) {
+    return res.status(400).json({ success: false, message: 'no auth token retrieve' });
+  }
+
+  const authDecode = jwtDecode(userAuth.userToken)
+  const expData = authDecode.exp
+
+  const currentTime = Math.floor(Date.now() / 1000);
+  if (currentTime > expData) {
+    return res.status(400).json({ success: false, message: 'login expired' });
   }
 
   try {
     const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
 
-    const userData = allusers.filter(user => user.user_customerID === userid);
+    const userData = allusers.filter(user => user.user_username === authDecode.username);
     const cleanedUserData = userData.map(({ id, user_loginSession, user_password, user_role, ...rest }) => rest);
-  
+    
     if (cleanedUserData.length > 0) {
       return res.status(200).json({ success: true, data: cleanedUserData });
     } else {
@@ -339,7 +349,7 @@ app.post("/api/connect-to-fb", async (req, res) => {
         if (connected === 'connected') {
           const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
           // Push to login
-          return res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession, customerID: userID ,facebook: connected});
+          return res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession,facebook: connected});
         } else {
           // Update Facebook connection status
           const updateData = "UPDATE sk_customer_credentials SET user_fb_connected = ? WHERE user_customerID = ?";
@@ -372,7 +382,7 @@ app.post("/api/connect-to-fb", async (req, res) => {
         
         if (insertFBData.affectedRows > 0) {
           const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
-          return res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession, customerID: customerID });
+          return res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession});
         } else {
           return res.status(500).json({ success: false, message: 'Error Registering Facebook Account' });
         }
@@ -389,6 +399,13 @@ app.post("/api/connect-to-fb", async (req, res) => {
   }
 });
 
+// connect to google
+const client = new OAuth2Client(googleClientID);
+
+app.post('/api/google-signin', async (req, res) => {
+  const { decoded } = req.body;
+  console.log(decoded);
+});
 
 
 // products
