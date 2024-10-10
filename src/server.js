@@ -400,12 +400,12 @@ app.post("/api/connect-to-fb", async (req, res) => {
 });
 
 // connect to google
-const client = new OAuth2Client(googleClientID);
+// const client = new OAuth2Client(googleClientID);
 
-app.post('/api/google-signin', async (req, res) => {
-  const { decoded } = req.body;
-  console.log(decoded);
-});
+// app.post('/api/google-signin', async (req, res) => {
+//   const { decoded } = req.body;
+//   console.log(decoded);
+// });
 
 
 // products
@@ -471,10 +471,7 @@ app.post('/api/product-info', async (req, res) => {
 });
 
 
-// add product
-app.post("/api/add-product", async (req,res) =>{
-  
-})
+
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
