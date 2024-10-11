@@ -127,7 +127,7 @@ app.post("/api/login", limiter,[
         
         if (updateResult.affectedRows > 0) {
           // Generate JWT token for the user
-          const authToken = jwt.sign({ customerID: user.userID }, jwtSecret, { expiresIn: "7d" });
+          const authToken = jwt.sign({ customerID: userID }, jwtSecret, { expiresIn: "7d" });
 
           return res.status(200).json({ success: true, message: 'Login successful', loginSession, token: authToken });
         } else {
