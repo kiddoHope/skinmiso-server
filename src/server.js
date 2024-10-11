@@ -94,6 +94,64 @@ function generateRandomString(length = 10) {
   return crypto.randomBytes(length).toString('hex').slice(0, length);
 }
 
+// fetch user data
+// Protected route to fetch user data
+app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
+  try {
+    const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
+
+    const userData = allusers.filter(user => user.user_username === req.user.username);
+    
+    if (!userData) {
+      return res.status(404).json({ message: "User data not found" });
+    }
+    
+    console.log(userData);
+    
+
+    const jsonDatapassed = [userData[0].user_customerID, userData[0].user_loginSession];
+    
+    res.status(200).json(jsonDatapassed);
+  } catch (error) {
+    console.error('Database error:', error);
+    return res.status(500).json({ success: false, message: 'Database connection failed' });
+  }
+});
+
+// current user
+app.post("/api/user",authenticateToken,async (req, res) => {
+  const { userToken } = req.body
+
+  if (!userToken) {
+    return res.status(400).json({ success: false, message: 'no auth token retrieve' });
+  }
+
+  const authDecode = jwtDecode(userToken)
+  
+  const expData = authDecode.exp
+
+  const currentTime = Math.floor(Date.now() / 1000);
+  if (currentTime > expData) {
+    return res.status(400).json({ success: false, message: 'login expired' });
+  }
+
+  try {
+    const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
+
+    const userData = allusers.filter(user => user.user_customerID === authDecode.customerID);
+    const cleanedUserData = userData.map(({ id, user_loginSession, user_password, user_role, ...rest }) => rest);
+    
+    if (cleanedUserData.length > 0) {
+      return res.status(200).json({ success: true, data: cleanedUserData });
+    } else {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+  } catch (error) {
+    console.error('Database error:', error);
+    return res.status(500).json({ success: false, message: 'Database connection failed' });
+  }
+});
+
 
 // Login endpoint
 app.post("/api/login", limiter,[
@@ -130,9 +188,6 @@ app.post("/api/login", limiter,[
         if (updateResult.affectedRows > 0) {
           // Generate JWT token for the user
           const authToken = jwt.sign({ userID }, jwtSecret, { expiresIn: "7d" });
-          console.log(authToken);
-          
-
           return res.status(200).json({ success: true, message: 'Login successful', loginSession, token: authToken });
         } else {
           return res.status(500).json({ success: false, message: 'Error creating session' });
@@ -256,66 +311,6 @@ app.post("/api/logout", authenticateToken, async (req, res) => {
     return res.status(500).json({ success: false, message: 'Database connection failed' });
   }
 });
-
-// fetch user data
-// Protected route to fetch user data
-app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
-  try {
-    const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
-
-    const userData = allusers.filter(user => user.user_username === req.user.username);
-    
-    if (!userData) {
-      return res.status(404).json({ message: "User data not found" });
-    }
-    
-    console.log(userData);
-    
-
-    const jsonDatapassed = [userData[0].user_customerID, userData[0].user_loginSession];
-    
-    res.status(200).json(jsonDatapassed);
-  } catch (error) {
-    console.error('Database error:', error);
-    return res.status(500).json({ success: false, message: 'Database connection failed' });
-  }
-});
-
-// current user
-app.post("/api/user",authenticateToken,async (req, res) => {
-  const { userToken } = req.body
-
-  if (!userToken) {
-    return res.status(400).json({ success: false, message: 'no auth token retrieve' });
-  }
-
-  const authDecode = jwtDecode(userToken)
-  
-  const expData = authDecode.exp
-
-  const currentTime = Math.floor(Date.now() / 1000);
-  if (currentTime > expData) {
-    return res.status(400).json({ success: false, message: 'login expired' });
-  }
-
-  try {
-    const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
-
-    const userData = allusers.filter(user => user.user_customerID === authDecode.customerID);
-    const cleanedUserData = userData.map(({ id, user_loginSession, user_password, user_role, ...rest }) => rest);
-    
-    if (cleanedUserData.length > 0) {
-      return res.status(200).json({ success: true, data: cleanedUserData });
-    } else {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-  } catch (error) {
-    console.error('Database error:', error);
-    return res.status(500).json({ success: false, message: 'Database connection failed' });
-  }
-});
-
-
 
 // fb login
 app.post("/api/connect-to-fb", async (req, res) => {
