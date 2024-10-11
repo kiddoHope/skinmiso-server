@@ -276,7 +276,7 @@ app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
 // current user
 app.post("/api/user",authenticateToken,async (req, res) => {
   const { userToken } = req.body
-  
+
   if (!userToken) {
     return res.status(400).json({ success: false, message: 'no auth token retrieve' });
   }
@@ -406,17 +406,12 @@ app.post('/api/google-signin', async (req, res) => {
 
   const decoded = jwtDecode(data)
 
-  console.log(decoded);
-  
-
   if (decoded) {
     try {
       const userRole = 'customer';
       const fbConnected = 'connected';
       const customerID = 'skms_' + generateRandomString(10);
       const email = decoded.email;
-      console.log(email);
-      
       const username = 'skms_user' + generateRandomString(10);
       const mobileno = 'no phone added';
       const hash_pass = '';
