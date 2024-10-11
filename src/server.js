@@ -119,17 +119,13 @@ app.post("/api/login", limiter,[
     // Check if user exists and password is correct
     if (result.length === 1) {
       const user = result[0];
-      console.log(user);
       
       if (await bcrypt.compare(password, user.user_password)) {
         // Password matches, update login session
         const updateSessionSql = "UPDATE sk_customer_credentials SET user_loginSession = ?, user_activity = 'active' WHERE user_username = ?";
         const [updateResult] = await db.query(updateSessionSql, [loginSession, user.user_username]);
-        console.log(updateResult);
         
         const userID = user.user_customerID
-        console.log(userID);
-        
         
         if (updateResult.affectedRows > 0) {
           // Generate JWT token for the user
@@ -272,6 +268,9 @@ app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
     if (!userData) {
       return res.status(404).json({ message: "User data not found" });
     }
+    
+    console.log(userData);
+    
 
     const jsonDatapassed = [userData[0].user_customerID, userData[0].user_loginSession];
     
