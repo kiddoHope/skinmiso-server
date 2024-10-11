@@ -100,6 +100,8 @@ app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
   try {
     const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
 
+    console.log(req.user,req.user.username);
+    
     const userData = allusers.filter(user => user.user_username === req.user.username);
     
     if (!userData) {
