@@ -123,11 +123,17 @@ app.post("/api/login", limiter,[
         // Password matches, update login session
         const updateSessionSql = "UPDATE sk_customer_credentials SET user_loginSession = ?, user_activity = 'active' WHERE user_username = ?";
         const [updateResult] = await db.query(updateSessionSql, [loginSession, user.user_username]);
+        console.log(updateResult);
+        
         const userID = user.user_customerID
+        console.log(userID);
+        
         
         if (updateResult.affectedRows > 0) {
           // Generate JWT token for the user
           const authToken = jwt.sign({ userID }, jwtSecret, { expiresIn: "7d" });
+          console.log(authToken);
+          
 
           return res.status(200).json({ success: true, message: 'Login successful', loginSession, token: authToken });
         } else {
