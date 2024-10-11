@@ -136,6 +136,8 @@ app.post("/api/user", authenticateToken, async (req, res) => {
   let authDecode;
   try {
     authDecode = jwtDecode(userToken);
+    console.log(authDecode);
+    
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });
   }
