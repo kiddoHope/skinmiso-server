@@ -146,7 +146,7 @@ app.post("/api/user", authenticateToken, async (req, res) => {
   try {
     const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
 
-    const userData = allusers.filter(user => user.user_customerID === authDecode.customerID);
+    const userData = allusers.filter(user => user.user_customerID === authDecode.userID);
     const cleanedUserData = userData.map(({ id, user_loginSession, user_password, user_role, ...rest }) => rest);
     
     if (cleanedUserData.length > 0) {
