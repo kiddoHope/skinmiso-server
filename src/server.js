@@ -112,7 +112,7 @@ function generateRandomString(length = 10) {
 app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
   try {
     const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
-    const userData = allusers.filter(user => user.user_customerID === req.user.userID);
+    const userData = allusers.filter(user => user.user_customerID === req.user.customerID);
     if (!userData) {
       return res.status(404).json({ message: "User data not found" });
     }
@@ -145,7 +145,7 @@ app.post("/api/user", authenticateToken, async (req, res) => {
   try {
     const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
 
-    const userData = allusers.filter(user => user.user_customerID === authDecode.userID);
+    const userData = allusers.filter(user => user.user_customerID === authDecode.customerID);
     const cleanedUserData = userData.map(({ id, user_loginSession, user_password, user_role, ...rest }) => rest);
     
     if (userData.length > 0) {
@@ -190,11 +190,11 @@ app.post("/api/login", limiter,[
         const updateSessionSql = "UPDATE sk_customer_credentials SET user_loginSession = ?, user_activity = 'active' WHERE user_username = ?";
         const [updateResult] = await db.query(updateSessionSql, [loginSession, user.user_username]);
         
-        const userID = user.user_customerID
+        const customerID = user.user_customerID
         
         if (updateResult.affectedRows > 0) {
           // Generate JWT token for the user
-          const authToken = jwt.sign({ userID }, jwtSecret, { expiresIn: "7d" });
+          const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
           return res.status(200).json({ success: true, message: 'Login successful', loginSession, token: authToken });
         } else {
           return res.status(500).json({ success: false, message: 'Error creating session' });
@@ -353,27 +353,27 @@ app.post("/api/connect-to-fb", async (req, res) => {
       const [emailCheckResults] = await db.query(emailCheckSql, [email]);
 
       if (emailCheckResults.length > 0) {
-        const userID = emailCheckResults[0].user_customerID;
+        const customerID = emailCheckResults[0].user_customerID;
         
         const connected = emailCheckResults[0].user_fb_connected;
 
         if (connected === 'connected') {
-          const authToken = jwt.sign({ userID }, jwtSecret, { expiresIn: "7d" });
+          const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
           // Push to login
           return res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession,facebook: connected});
         } else {
           // Update Facebook connection status
           const updateData = "UPDATE sk_customer_credentials SET user_fb_connected = ? WHERE user_customerID = ?";
-          const [updateDataResult] = await db.query(updateData, [fbConnected, userID]);
+          const [updateDataResult] = await db.query(updateData, [fbConnected, customerID]);
 
           if (updateDataResult.affectedRows > 0) {
             // Insert Facebook info if update was successful
             const insertFBinfo = "INSERT INTO sk_customer_facebook (user_customerID, user_facebookID) VALUES (?, ?)";
-            const [insertFBData] = await db.query(insertFBinfo, [userID, fbID]);
+            const [insertFBData] = await db.query(insertFBinfo, [customerID, fbID]);
             
             if (insertFBData.affectedRows > 0) {
-              const authToken = jwt.sign({ userID }, jwtSecret, { expiresIn: "7d" });
-              return res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession, customerID: userID });
+              const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
+              return res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession, customerID: customerID });
             } else {
               return res.status(500).json({ success: false, message: 'Error registering Facebook Account' });
             }
@@ -433,23 +433,23 @@ app.post('/api/google-signin', async (req, res) => {
       const [emailCheckResults] = await db.query(emailCheckSql, [email]);
 
       if (emailCheckResults.length > 0) {
-        const userID = emailCheckResults[0].user_customerID;
+        const customerID = emailCheckResults[0].user_customerID;
         
         const connected = emailCheckResults[0].user_google_connected;
 
         if (connected === 'connected') {
-          const authToken = jwt.sign({ userID }, jwtSecret, { expiresIn: "7d" });
+          const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
           // Push to login
           return res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession,google: connected});
         } else {
           // Update Facebook connection status
           const updateData = "UPDATE sk_customer_credentials SET user_google_connected = ? WHERE user_customerID = ?";
-          const [updateDataResult] = await db.query(updateData, [fbConnected, userID]);
+          const [updateDataResult] = await db.query(updateData, [fbConnected, customerID]);
 
           if (updateDataResult.affectedRows > 0) {
 
-            const authToken = jwt.sign({ userID }, jwtSecret, { expiresIn: "7d" });
-            return res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession, customerID: userID });
+            const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
+            return res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession, customerID: customerID });
 
           } else {
             return res.status(500).json({ success: false, message: 'Error updating customer credentials' });
