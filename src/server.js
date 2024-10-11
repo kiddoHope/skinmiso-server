@@ -129,8 +129,6 @@ app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
 app.post("/api/user", authenticateToken, async (req, res) => {
   const { userToken } = req.body;
 
-  console.log(userToken);
-
   if (!userToken) {
     return res.status(400).json({ success: false, message: 'No auth token retrieved' });
   }
@@ -138,7 +136,6 @@ app.post("/api/user", authenticateToken, async (req, res) => {
   let authDecode;
   try {
     authDecode = jwtDecode(userToken);
-    console.log(authDecode);
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });
   }
@@ -149,7 +146,7 @@ app.post("/api/user", authenticateToken, async (req, res) => {
     const userData = allusers.filter(user => user.user_customerID === authDecode.userID);
     const cleanedUserData = userData.map(({ id, user_loginSession, user_password, user_role, ...rest }) => rest);
     
-    if (cleanedUserData.length > 0) {
+    if (userData.length > 0) {
       return res.status(200).json({ success: true, data: cleanedUserData });
     } else {
       return res.status(404).json({ success: false, message: 'User not found' });
