@@ -102,7 +102,7 @@ app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
 
     console.log(req.user,req.user.username);
     
-    const userData = allusers.filter(user => user.user_username === req.user.username);
+    const userData = allusers.filter(user => user.user_username === req.user.userID);
     
     if (!userData) {
       return res.status(404).json({ message: "User data not found" });
