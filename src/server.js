@@ -119,6 +119,8 @@ app.post("/api/login", limiter,[
     // Check if user exists and password is correct
     if (result.length === 1) {
       const user = result[0];
+      console.log(user);
+      
       if (await bcrypt.compare(password, user.user_password)) {
         // Password matches, update login session
         const updateSessionSql = "UPDATE sk_customer_credentials SET user_loginSession = ?, user_activity = 'active' WHERE user_username = ?";
