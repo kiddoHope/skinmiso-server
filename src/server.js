@@ -275,13 +275,14 @@ app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
 
 // current user
 app.post("/api/user",authenticateToken,async (req, res) => {
-  const { userAuth } = req.body
-
-  if (!userAuth) {
+  const { userToken } = req.body
+  
+  if (!userToken) {
     return res.status(400).json({ success: false, message: 'no auth token retrieve' });
   }
 
-  const authDecode = jwtDecode(userAuth.userToken)
+  const authDecode = jwtDecode(userToken)
+  
   const expData = authDecode.exp
 
   const currentTime = Math.floor(Date.now() / 1000);
@@ -292,7 +293,7 @@ app.post("/api/user",authenticateToken,async (req, res) => {
   try {
     const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
 
-    const userData = allusers.filter(user => user.user_username === authDecode.username);
+    const userData = allusers.filter(user => user.user_customerID === authDecode.userID);
     const cleanedUserData = userData.map(({ id, user_loginSession, user_password, user_role, ...rest }) => rest);
     
     if (cleanedUserData.length > 0) {
