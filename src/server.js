@@ -348,7 +348,7 @@ app.post("/api/connect-to-fb", async (req, res) => {
         const connected = emailCheckResults[0].user_fb_connected;
 
         if (connected === 'connected') {
-          const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
+          const authToken = jwt.sign({ userID }, jwtSecret, { expiresIn: "7d" });
           // Push to login
           return res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession,facebook: connected});
         } else {
@@ -362,7 +362,7 @@ app.post("/api/connect-to-fb", async (req, res) => {
             const [insertFBData] = await db.query(insertFBinfo, [userID, fbID]);
             
             if (insertFBData.affectedRows > 0) {
-              const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
+              const authToken = jwt.sign({ userID }, jwtSecret, { expiresIn: "7d" });
               return res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession, customerID: userID });
             } else {
               return res.status(500).json({ success: false, message: 'Error registering Facebook Account' });
@@ -382,7 +382,7 @@ app.post("/api/connect-to-fb", async (req, res) => {
         const [insertFBData] = await db.query(insertFBinfo, [customerID, fbID]);
         
         if (insertFBData.affectedRows > 0) {
-          const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
+          const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
           return res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession});
         } else {
           return res.status(500).json({ success: false, message: 'Error Registering Facebook Account' });
