@@ -123,10 +123,11 @@ app.post("/api/login", limiter,[
         // Password matches, update login session
         const updateSessionSql = "UPDATE sk_customer_credentials SET user_loginSession = ?, user_activity = 'active' WHERE user_username = ?";
         const [updateResult] = await db.query(updateSessionSql, [loginSession, user.user_username]);
+        const userID = user.user_customerID
         
         if (updateResult.affectedRows > 0) {
           // Generate JWT token for the user
-          const authToken = jwt.sign({ username: user.user_username }, jwtSecret, { expiresIn: "7d" });
+          const authToken = jwt.sign({ customerID: user.userID }, jwtSecret, { expiresIn: "7d" });
 
           return res.status(200).json({ success: true, message: 'Login successful', loginSession, token: authToken });
         } else {
@@ -197,7 +198,7 @@ app.post("/api/register-acc", limiter, [
       const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, userRole, activity, loginSession]);
     
     if (insertResult.affectedRows > 0) {
-      const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
+      const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
       
       res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
     } else {
