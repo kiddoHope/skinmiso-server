@@ -8,11 +8,10 @@ require('dotenv').config();
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit')
-const { jwtDecode } = require('jwt-decode')
 const app = express();
 const port = 5000;
 const axios = require('axios')
-const { OAuth2Client } = require('google-auth-library');
+const atob = require('atob');
 
 app.use(bodyParser.json());
 
@@ -38,7 +37,21 @@ app.use(cors({
 // const jwtSecret = process.env.REACT_APP_JWT_SECRET;
 // jwt secret
 const jwtSecret = process.env.REACT_APP_JWT_SECRET
-const googleClientID = process.env.REACT_GOOGLE_CLIENT_ID
+// const googleClientID = process.env.REACT_GOOGLE_CLIENT_ID
+
+const jwtDecode = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    throw new Error('Invalid token specified');
+  }
+};
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -113,17 +126,22 @@ app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
 });
 
 // current user
-app.post("/api/user",authenticateToken,async (req, res) => {
-  const { userToken } = req.body
+app.post("/api/user", authenticateToken, async (req, res) => {
+  const { userToken } = req.body;
 
   console.log(userToken);
-  
+
   if (!userToken) {
-    return res.status(400).json({ success: false, message: 'no auth token retrieve' });
+    return res.status(400).json({ success: false, message: 'No auth token retrieved' });
   }
 
-  const authDecode = jwtDecode(userToken)
-  console.log(authDecode);
+  let authDecode;
+  try {
+    authDecode = jwtDecode(userToken);
+    console.log(authDecode);
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message });
+  }
   
   try {
     const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
