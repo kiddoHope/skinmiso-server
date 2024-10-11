@@ -116,19 +116,15 @@ app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
 app.post("/api/user",authenticateToken,async (req, res) => {
   const { userToken } = req.body
 
+  console.log(userToken);
+  
   if (!userToken) {
     return res.status(400).json({ success: false, message: 'no auth token retrieve' });
   }
 
   const authDecode = jwtDecode(userToken)
+  console.log(authDecode);
   
-  const expData = authDecode.exp
-
-  const currentTime = Math.floor(Date.now() / 1000);
-  if (currentTime > expData) {
-    return res.status(400).json({ success: false, message: 'login expired' });
-  }
-
   try {
     const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
 
