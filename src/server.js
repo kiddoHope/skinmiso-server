@@ -347,7 +347,7 @@ app.post("/api/connect-to-fb", async (req, res) => {
         const connected = emailCheckResults[0].user_fb_connected;
 
         if (connected === 'connected') {
-          const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
+          const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
           // Push to login
           return res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession,facebook: connected});
         } else {
@@ -361,7 +361,7 @@ app.post("/api/connect-to-fb", async (req, res) => {
             const [insertFBData] = await db.query(insertFBinfo, [userID, fbID]);
             
             if (insertFBData.affectedRows > 0) {
-              const authToken = jwt.sign({ username }, jwtSecret, { expiresIn: "7d" });
+              const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
               return res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession, customerID: userID });
             } else {
               return res.status(500).json({ success: false, message: 'Error registering Facebook Account' });
@@ -400,11 +400,78 @@ app.post("/api/connect-to-fb", async (req, res) => {
 });
 
 // connect to google
-const client = new OAuth2Client(googleClientID);
-
 app.post('/api/google-signin', async (req, res) => {
-  const { decoded } = req.body;
-  console.log(decoded);
+  const { data } = req.body;
+
+  const decoded = jwtDecode(data)
+
+  if (decoded) {
+    try {
+      const userRole = 'customer';
+      const fbConnected = 'connected';
+      const customerID = 'skms_' + generateRandomString(10);
+      const email = decoded.email;
+      const username = 'skms_user' + generateRandomString(10);
+      const mobileno = 'no phone added';
+      const hash_pass = '';
+      const generatedSession = generateRandomString(10);
+      const loginSession = 'sknms' + generatedSession + 'log';
+      const activity = 'active';
+
+      const emailCheckSql = "SELECT * FROM sk_customer_credentials WHERE user_email = ?";
+      const [emailCheckResults] = await db.query(emailCheckSql, [email]);
+
+      if (emailCheckResults.length > 0) {
+        const userID = emailCheckResults[0].user_customerID;
+        
+        const connected = emailCheckResults[0].user_google_connected;
+
+        if (connected === 'connected') {
+          const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
+          // Push to login
+          return res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession,google: connected});
+        } else {
+          // Update Facebook connection status
+          const updateData = "UPDATE sk_customer_credentials SET user_google_connected = ? WHERE user_customerID = ?";
+          const [updateDataResult] = await db.query(updateData, [fbConnected, userID]);
+
+          if (updateDataResult.affectedRows > 0) {
+
+            const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
+            return res.status(200).json({ success: true, message: "Customer Login successfully", token: authToken, loginSession, customerID: userID });
+
+          } else {
+            return res.status(500).json({ success: false, message: 'Error updating customer credentials' });
+          }
+        }
+      }
+
+      // If user does not exist, insert new user data
+      const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_role, user_google_connected, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, userRole, fbConnected, activity, loginSession]);
+
+      if (insertResult.affectedRows > 0) {
+        const insertFBinfo = "INSERT INTO sk_customer_facebook (user_customerID, user_facebookID) VALUES (?, ?)";
+        const [insertFBData] = await db.query(insertFBinfo, [customerID, fbID]);
+        
+        if (insertFBData.affectedRows > 0) {
+          const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
+          return res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession});
+        } else {
+          return res.status(500).json({ success: false, message: 'Error Registering Facebook Account' });
+        }
+      } else {
+        return res.status(500).json({ success: false, message: 'Error registering user' });
+      }
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ success: false, message: 'Server Error' });
+    }
+  } else {
+    console.log('No data received');
+    return res.status(400).json({ success: false, message: 'Access token is required' });
+  }
+
 });
 
 
