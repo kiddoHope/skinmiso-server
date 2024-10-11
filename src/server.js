@@ -99,17 +99,12 @@ function generateRandomString(length = 10) {
 app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
   try {
     const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
-
-    console.log(req.user,req.user.username);
     
     const userData = allusers.filter(user => user.user_username === req.user.userID);
     
     if (!userData) {
       return res.status(404).json({ message: "User data not found" });
     }
-    
-    console.log(userData);
-    
 
     const jsonDatapassed = [userData[0].user_customerID, userData[0].user_loginSession];
     
