@@ -401,8 +401,8 @@ app.post("/api/connect-to-fb", async (req, res) => {
 
 // connect to google
 app.post('/api/google-signin', async (req, res) => {
-  // const { data } = req.body;
-  const data = "eyJhbGciOiJSUzI1NiIsImtpZCI6ImE1MGY2ZTcwZWY0YjU0OGE1ZmQ5MTQyZWVjZDFmYjhmNTRkY2U5ZWUiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhenAiOiIyNDAwNTk2NzMzNDUtMWNxNjB2MTF0bTJpdWRrcGt2czB2MDNqNXFiOXNjM2kuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiIyNDAwNTk2NzMzNDUtMWNxNjB2MTF0bTJpdWRrcGt2czB2MDNqNXFiOXNjM2kuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJzdWIiOiIxMDIyNzI3MzgyODY1NjA3NzM0MjkiLCJlbWFpbCI6ImpvbmtpYm9AZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5iZiI6MTcyODYyMDEzNiwibmFtZSI6IkpvaG4gSG9wZSBNYWdsYXF1aSIsInBpY3R1cmUiOiJodHRwczovL2xoMy5nb29nbGV1c2VyY29udGVudC5jb20vYS9BQ2c4b2NMSWNLd05qYTFubmh5d0Zma1NQLUc2VjdZRExPUFh1bWdqUWNycVRqNEFqRlAtM0Jsej1zOTYtYyIsImdpdmVuX25hbWUiOiJKb2huIEhvcGUiLCJmYW1pbHlfbmFtZSI6Ik1hZ2xhcXVpIiwiaWF0IjoxNzI4NjIwNDM2LCJleHAiOjE3Mjg2MjQwMzYsImp0aSI6IjE0ODMyM2ZlZTVkNzU0NWY0ODAwYzg1YjU3NjAyYWIzYzk0MDBhMmEifQ.cPqrafGHbwVnwmhGPCurwQK9wm_WtolPU-ZRX9a4ASMxn5ejowq_5ji0nYNB_EL_9b7CHa72n0iJXhtxSoOqWat0Y6Nq__3cBZGsgY1ZpIz_tt9J83UpfnIGmEEzvMp14qQyqaImYFfaiwxOiDiAl0n6tB1it74neQIW-1Hua1c4RLxnt5kbgZQqFrQ2IXLU8rF-wsWiFNx6lHlhQOb2TVkzcjxUhcfTHiQFvwhanWCsn0uwH1YXbVIc447gSqc5dK2b0O73J5rZHVGKRlTa9luG0RuzMJLjozyScyYaF50PjEBJqjY4YEU80TNJjjI4gdeizmxkbRKHgms1siJdmw"
+  const { data } = req.body;
+
   const decoded = jwtDecode(data)
 
   console.log(decoded);
@@ -469,7 +469,6 @@ app.post('/api/google-signin', async (req, res) => {
     console.log('No data received');
     return res.status(400).json({ success: false, message: 'Access token is required' });
   }
-
 });
 
 // products
