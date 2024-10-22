@@ -539,6 +539,32 @@ app.post('/api/product-info', async (req, res) => {
   }
 });
 
+app.post('/api/all-products', async (req,res) => {
+  try {
+    
+    const connection = await db.getConnection()
+
+    const [productName] = await connection.query(`
+      SELECT 
+          sk_products.sm_product_name, 
+          sk_products.sm_product_category, 
+          sk_product_info.*, 
+          sk_product_imgs.*
+      FROM sk_products
+      INNER JOIN sk_product_info 
+          ON sk_products.sm_product_name = sk_product_info.sm_product_name
+      INNER JOIN sk_product_imgs 
+          ON sk_products.sm_product_name = sk_product_imgs.sm_product_name;
+    `);
+  
+    
+    res.status(200).json(productName)
+
+  } catch (error) {
+    console.log(error);
+    
+  }
+})
 
 
 
