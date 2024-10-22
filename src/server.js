@@ -540,10 +540,7 @@ app.post('/api/product-info', async (req, res) => {
 });
 
 
-// add product
-app.post("/api/add-product", async (req,res) =>{
-  
-})
+
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
