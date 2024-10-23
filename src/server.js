@@ -274,6 +274,8 @@ app.post("/api/register-acc", limiter, [
     console.log(insertResult);
 
     if (insertResult.affectedRows > 0) {
+      console.log(jwtSecret);
+      
       const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
       res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
     } else {
