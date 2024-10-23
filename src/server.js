@@ -227,7 +227,6 @@ app.post("/api/login", limiter,[
     return res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 });
-
 // create account
 app.post("/api/register-acc", limiter, [
   body('email').isEmail().withMessage('Invalid email format.'),
@@ -241,24 +240,21 @@ app.post("/api/register-acc", limiter, [
       return res.status(400).json({ success: false, errors: errors.array() });
     }
 
-    const customerID = 'skms_' + generateRandomString(10)
+    const customerID = 'skms_' + generateRandomString(10);
     const { email, mobileno, username, password } = req.body;
 
-    // Check if username already exists
     const usernameCheckSql = "SELECT * FROM sk_customer_credentials WHERE user_username = ?";
     const [usernameCheckResults] = await db.query(usernameCheckSql, [username]);
     if (usernameCheckResults.length > 0) {
       return res.status(400).json({ success: false, message: 'Username already exists' });
     }
 
-    // Check if email already exists
     const emailCheckSql = "SELECT * FROM sk_customer_credentials WHERE user_email = ?";
     const [emailCheckResults] = await db.query(emailCheckSql, [email]);
     if (emailCheckResults.length > 0) {
       return res.status(400).json({ success: false, message: 'Email already exists' });
     }
 
-    // If mobileno is not "no phone added", check if it already exists
     if (mobileno !== "no phone added") {
       const mobileCheckSql = "SELECT * FROM sk_customer_credentials WHERE user_mobileno = ?";
       const [mobileCheckResults] = await db.query(mobileCheckSql, [mobileno]);
@@ -267,24 +263,25 @@ app.post("/api/register-acc", limiter, [
       }
     }
 
-    // Hash the password
     const hash_pass = await bcrypt.hash(password, 10);
     const generatedSession = generateRandomString(10);
-    const userRole = 'customer'
+    const userRole = 'customer';
     const loginSession = 'sknms' + generatedSession + 'log';
     const activity = 'active';
 
-    // Insert data into database
     const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_role, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, userRole, activity, loginSession]);
     console.log(insertResult);
-    
-    
-    const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
-    res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
+
+    if (insertResult.affectedRows > 0) {
+      const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
+      res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
+    } else {
+      res.status(500).json({ success: false, message: 'Error registering user' });
+    }
   } catch (error) {
-    console.error(error); // Log the error for debugging
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    console.error(error.message); // Log only the error message
+    res.status(500).json({ success: false, message: 'Internal server error', error: error.message }); // Return specific error message
   }
 });
 
