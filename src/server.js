@@ -280,8 +280,12 @@ app.post("/api/register-acc", limiter, [
       res.status(500).json({ success: false, message: 'Error registering user' });
     }
   } catch (error) {
-    console.error(error.message); // Log only the error message
-    res.status(500).json({ success: false, message: 'Internal server error', error: error.message }); // Return specific error message
+    console.error("Caught an error:", error); // Log the full error for better insight
+    if (error instanceof SomeExpectedError) {
+      res.status(400).json({ success: false, message: "A specific error message" });
+    } else {
+      res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
+    }
   }
 });
 
