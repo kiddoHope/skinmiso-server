@@ -278,7 +278,7 @@ app.post("/api/register-acc", limiter, [
     const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_role, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, userRole, activity, loginSession]);
 
-    if (insertResult.affectedRows <= 0) {
+    if (insertResult.affectedRows = 0) {
       res.status(500).json({ success: false, message: 'Error registering user' });
     } else {
       const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
