@@ -274,20 +274,15 @@ app.post("/api/register-acc", limiter, [
     console.log(insertResult);
 
     if (insertResult.affectedRows > 0) {
-      console.log(jwtSecret);
-      
+      console.log(customerID,jwtSecret);
       const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
       res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
     } else {
       res.status(500).json({ success: false, message: 'Error registering user' });
     }
   } catch (error) {
-    console.error("Caught an error:", error); // Log the full error for better insight
-    if (error instanceof SomeExpectedError) {
-      res.status(400).json({ success: false, message: "A specific error message" });
-    } else {
-      res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
-    }
+    console.error(error.message); // Log only the error message
+    res.status(500).json({ success: false, message: 'Internal server error', error: error.message }); // Return specific error message
   }
 });
 
