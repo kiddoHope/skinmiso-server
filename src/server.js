@@ -48,7 +48,6 @@ app.use((req, res, next) => {
 });
 
 
-
 // jwt secret
 // const jwtSecret = process.env.REACT_APP_JWT_SECRET;
 // jwt secret
@@ -278,11 +277,12 @@ app.post("/api/register-acc", limiter, [
     // Insert data into database
     const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_role, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
     const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, userRole, activity, loginSession]);
-
+    console.log(insertResult);
+    
     if (insertResult.affectedRows > 0) {
       const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
       
-      res.json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
+      res.status(200).json({ success: true, message: "Customer registered successfully", token: authToken, loginSession });
     } else {
       res.status(500).json({ success: false, message: 'Error registering user' });
     }
