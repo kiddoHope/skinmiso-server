@@ -15,7 +15,7 @@ const atob = require('atob');
 
 app.use(bodyParser.json());
 
-const allowedOrigins = ['https://skinmiso.ca', 'http://localhost:3000', 'https://skinmiso.vercel.app'];
+const allowedOrigins = ['https://skinmiso.ca', 'http://localhost:3000', 'https://skinmiso.vercel.app', "skinmiso-ph-beta.verce.app", "localhost:3001"];
 
 app.use(cors({
   origin: (origin, callback) => {
