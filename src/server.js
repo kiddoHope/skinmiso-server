@@ -37,6 +37,11 @@ app.options('*', (req, res) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin);
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-access-token, X-Requested-With, Accept');
+
+
+
+
+  
   res.header('Access-Control-Allow-Credentials', 'true');
   res.sendStatus(204);
 });
@@ -161,7 +166,7 @@ app.post("/api/user", authenticateToken, async (req, res) => {
     const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
 
     const userData = allusers.filter(user => user.user_customerID === authDecode.customerID);
-    const cleanedUserData = userData.map(({ id, user_loginSession, user_password, user_role, ...rest }) => rest);
+    const cleanedUserData = userData.map(({ id, user_loginSession, user_password, ...rest }) => rest);
     
     if (userData.length > 0) {
       return res.status(200).json({ success: true, data: cleanedUserData });
