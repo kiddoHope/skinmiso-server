@@ -578,7 +578,18 @@ app.post('/api/all-products', async (req,res) => {
     
   }
 })
+app.get('/api/all-products-banner', async (req,res) => {
+  try {
+    const connection = await db.getConnection()
 
+    const [allPrdBanners] = await connection.query(`SELECT * FROM sk_banners_images`);
+    
+    res.status(200).json(allPrdBanners)
+  } catch (error) {
+    console.log(error);
+    
+  }
+})
 
 
 app.listen(port, () => {
