@@ -156,7 +156,6 @@ app.post("/api/user", authenticateToken, async (req, res) => {
   let authDecode;
   try {
     authDecode = jwtDecode(userToken);
-    console.log(authDecode);
     
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });
@@ -164,12 +163,18 @@ app.post("/api/user", authenticateToken, async (req, res) => {
   
   try {
     const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
+    const [allusersInfo] = await db.query("SELECT * FROM sk_customer_info");
 
     const userData = allusers.filter(user => user.user_customerID === authDecode.customerID);
     const cleanedUserData = userData.map(({ id, user_loginSession, user_password, ...rest }) => rest);
+    const userInfo = allusersInfo.filter(user => user.user_customerID === authDecode.customerID)
+    const cleanedUserInfo = userInfo.map(({ id, ...rest }) => rest)
+
+    // Assuming each array has only one object, merge the first elements
+    const userinfo = [{ ...cleanedUserData[0], ...cleanedUserInfo[0] }];
     
     if (userData.length > 0) {
-      return res.status(200).json({ success: true, data: cleanedUserData });
+      return res.status(200).json({ success: true, data: userinfo });
     } else {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
@@ -278,8 +283,18 @@ app.post("/api/register-acc", limiter, [
     const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, userRole, activity, loginSession]);
 
     if (insertResult.affectedRows > 0) {
-      const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
-      return res.status(200).json({ success: true, message: 'Customer successfully registered', loginSession, token: authToken });
+
+      const insertInfo = "INSERT INTO sk_customer_info (user_customerID) VALUES (?)";
+      const [insertInfoResult] = await db.query(insertInfo, [customerID]);
+      console.log(insertInfoResult);
+      
+
+      if (insertInfoResult.affectedRows > 0) {
+        const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
+        return res.status(200).json({ success: true, message: 'Customer successfully registered', loginSession, token: authToken });
+      } else {
+        return res.status(500).json({ success: false, message: 'Error registering user' });
+      }
     } else {
       return res.status(500).json({ success: false, message: 'Error registering user' });
     }
@@ -288,6 +303,54 @@ app.post("/api/register-acc", limiter, [
     res.status(500).json({ success: false, message: 'Internal server error', error: error.message }); // Return specific error message
   }
 });
+
+// Updata endpoint
+app.post("/api/update-user-data", async (req,res) => {
+  const {userData} = req.body
+
+  if (!userData) {
+    res.status(500).json({success:false, message: "No data retrieve"})
+  }
+  
+  const customerID = userData.user_customerID
+
+  const email = userData.user_email;
+  const mobileno = userData.user_mobileno
+  const firstName = userData.user_first_name;
+  const lastName = userData.user_last_name;
+  const gender = userData.user_gender;
+  const bday = userData.user_birthday
+
+
+  try {
+    const updateUsercred = `
+      UPDATE sk_customer_credentials 
+      SET user_email = ?, user_mobileno = ? 
+      WHERE user_customerID = ?`;
+    const [updateUsercredRes] = await db.query(updateUsercred, [email, mobileno, customerID]);
+
+    if (updateUsercredRes.affectedRows > 0) {
+      const updataUserInfo = `
+      UPDATE sk_customer_info 
+      SET user_first_name = ?, user_last_name = ?,user_gender = ? ,user_birthday = ?  
+      WHERE user_customerID = ?`;
+      
+      const [updateUserInfoRes] = await db.query(updataUserInfo, [firstName, lastName,gender,bday, customerID]);
+
+      if (updateUserInfoRes.affectedRows > 0) {
+        return res.status(200).json({ success: true, message: "User data updated successfully" });
+      } else {
+        return res.status(500).json({ success: false, message: "User not found or no changes made" });
+      }
+    }
+    return res.status(500).json({ success: false, message: "User not found or no changes made" });
+  } catch (error) {
+    console.log(error);
+    
+  }
+
+
+})
 
 
 // Logout endpoint
@@ -587,7 +650,6 @@ app.get('/api/all-products-banner', async (req,res) => {
     res.status(200).json(allPrdBanners)
   } catch (error) {
     console.log(error);
-    
   }
 })
 
