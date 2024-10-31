@@ -292,7 +292,6 @@ app.post("/api/register-acc", limiter, [
 
       const insertInfo = "INSERT INTO sk_customer_info (user_customerID) VALUES (?)";
       const [insertInfoResult] = await db.query(insertInfo, [customerID]);
-      console.log(insertInfoResult);
       
 
       if (insertInfoResult.affectedRows > 0) {
@@ -321,7 +320,6 @@ app.post("/api/update-user-data", async (req,res) => {
 
   const email = userData.user_email;
   const mobileno = userData.user_mobileno
-  const pfp = userData.user_profile_pic
   const firstName = userData.user_first_name;
   const lastName = userData.user_last_name;
   const gender = userData.user_gender;
@@ -338,10 +336,10 @@ app.post("/api/update-user-data", async (req,res) => {
     if (updateUsercredRes.affectedRows > 0) {
       const updataUserInfo = `
       UPDATE sk_customer_info 
-      SET user_profile_pic = ?, user_first_name = ?, user_last_name = ?,user_gender = ? ,user_birthday = ?
+      SET user_first_name = ?, user_last_name = ?,user_gender = ? ,user_birthday = ?
       WHERE user_customerID = ?`;
       
-      const [updateUserInfoRes] = await db.query(updataUserInfo, [pfp,firstName, lastName,gender,bday, customerID]);
+      const [updateUserInfoRes] = await db.query(updataUserInfo, [firstName, lastName,gender,bday, customerID]);
 
       if (updateUserInfoRes.affectedRows > 0) {
         return res.status(200).json({ success: true, message: "User data updated successfully" });
@@ -454,14 +452,14 @@ app.post('/api/update-address', async (req,res) => {
 app.post("/api/upload-profile-picture", upload.single("file"), async (req, res) => {
   const imageFile = req.file;
   const customerID = req.body.customerID
-  const imgName = customerID + imageFile.originalname + generateRandomString(10)
+  const imgName = customerID + imageFile.originalname
   
   if (!imageFile) {
     return res.status(400).send("No file uploaded.");
   }
 
   const formData = new FormData();
-  formData.append("file", imageFile.buffer, { filename: imageFile.originalname, contentType: imageFile.mimetype });
+  formData.append("file", imageFile.buffer, { filename: imgName, contentType: imageFile.mimetype });
 
   try {
     const response = await axios.post("https://2wave.io/skinmiso/php/upload-customer-profile.php", formData, {
