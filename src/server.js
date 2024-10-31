@@ -164,14 +164,16 @@ app.post("/api/user", authenticateToken, async (req, res) => {
   try {
     const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
     const [allusersInfo] = await db.query("SELECT * FROM sk_customer_info");
-
+    const [allusersAddress] = await db.query("SELECT * FROM sk_customer_address");
+    
     const userData = allusers.filter(user => user.user_customerID === authDecode.customerID);
     const cleanedUserData = userData.map(({ id, user_loginSession, user_password, ...rest }) => rest);
     const userInfo = allusersInfo.filter(user => user.user_customerID === authDecode.customerID)
     const cleanedUserInfo = userInfo.map(({ id, ...rest }) => rest)
-
-    // Assuming each array has only one object, merge the first elements
-    const userinfo = [{ ...cleanedUserData[0], ...cleanedUserInfo[0] }];
+    const userAddress = allusersAddress.filter(user => user.user_customerID === authDecode.customerID)
+    const cleanedAddress = userAddress.map(({ id, user_customerID, ...rest }) => rest)
+    
+    const userinfo = [{ ...cleanedUserData[0], ...cleanedUserInfo[0], ...cleanedAddress[0] }];
     
     if (userData.length > 0) {
       return res.status(200).json({ success: true, data: userinfo });
@@ -316,6 +318,7 @@ app.post("/api/update-user-data", async (req,res) => {
 
   const email = userData.user_email;
   const mobileno = userData.user_mobileno
+  const pfp = userData.user_profile_pic
   const firstName = userData.user_first_name;
   const lastName = userData.user_last_name;
   const gender = userData.user_gender;
@@ -332,10 +335,10 @@ app.post("/api/update-user-data", async (req,res) => {
     if (updateUsercredRes.affectedRows > 0) {
       const updataUserInfo = `
       UPDATE sk_customer_info 
-      SET user_first_name = ?, user_last_name = ?,user_gender = ? ,user_birthday = ?  
+      SET user_profile_pic = ?, user_first_name = ?, user_last_name = ?,user_gender = ? ,user_birthday = ?
       WHERE user_customerID = ?`;
       
-      const [updateUserInfoRes] = await db.query(updataUserInfo, [firstName, lastName,gender,bday, customerID]);
+      const [updateUserInfoRes] = await db.query(updataUserInfo, [pfp,firstName, lastName,gender,bday, customerID]);
 
       if (updateUserInfoRes.affectedRows > 0) {
         return res.status(200).json({ success: true, message: "User data updated successfully" });
@@ -394,6 +397,80 @@ app.post("/api/logout", authenticateToken, async (req, res) => {
     return res.status(500).json({ success: false, message: 'Database connection failed' });
   }
 });
+
+// update Address 
+app.post('/api/update-address', async (req,res) => {
+  const {addressData} = req.body;
+  
+  if (!addressData) {
+    return res.status(500).json({ success: false, message: "No data received"})
+  }
+  const connection = await db.getConnection(); // Get a connection from the pool
+
+  try {
+    const customerID = addressData.customerID
+    const country = addressData.country
+    const addressLabel = addressData.addressLabel
+    const city = addressData.city
+    const district = addressData.district
+    const houseNumber = addressData.houseNumber
+    const postalCode = addressData.postalCode
+    const region = addressData.region
+    const state = addressData.state
+    const street = addressData.street
+
+    const [checkCustomerAddress] = await connection.query(
+      'SELECT * FROM sk_customer_address WHERE user_customerID = ?',
+      [customerID]
+    );
+
+    if (checkCustomerAddress.length > 0) {
+      const updateAddress = "UPDATE sk_customer_address SET user_country = ?, user_state = ?, user_region = ?,user_district = ?, user_city = ?, user_postal_code = ?, user_street = ?, user_houseNo = ?, user_address_label = ? WHERE user_customerID = ?"
+
+      const [updateRes] = await connection.query(updateAddress, [country, state, region, district, city, postalCode, street, houseNumber, addressLabel, customerID]);
+
+      if (updateRes.affectedRows > 0) {
+        return res.status(200).json({ success: true, message: 'Successfull updated the address' });
+      }
+    } else if (checkCustomerAddress.length === 0) {
+      const insertAddress = "INSERT INTO sk_customer_address (user_country, user_state, user_region, user_district, user_city, user_postal_code, user_street, user_houseNo, user_address_label, user_customerID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      const [insertAddressRes] = await db.query(insertAddress, [country, state, region, district, city, postalCode, street, houseNumber, addressLabel, customerID]);
+      
+      if (insertAddressRes.affectedRows > 0) {
+        return res.status(200).json({ success: true, message: 'Successfull Added the address' });
+      }
+    } else {
+      return res.status(500).json({success:false, message : "unknown Internal Server Error"})
+    }
+  
+  } catch (error) {
+    console.log(error);
+    
+  }
+})
+
+// fetch address
+
+// upload profile img
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, '/skinmiso/'); // Change this to your desired upload folder
+//   },
+//   filename: (req, file, cb) => {
+//     cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname)); // File naming convention
+//   }
+// });
+
+// const upload = multer({ storage: storage });
+// // Create the upload endpoint
+// app.post('/api/upload-profile-pic', upload.single('profilePic'), (req, res) => {
+//   if (!req.file) {
+//     return res.status(400).send('No file uploaded.');
+//   }
+//   // Handle the uploaded file and save the URL or file name to your database
+//   const filePath = `https://2wave.io/skinmiso/profile/${req.file.filename}`; // Update this to the correct path
+//   res.status(200).json({ message: 'File uploaded successfully!', filePath });
+// });
 
 // fb login
 app.post("/api/connect-to-fb", async (req, res) => {
