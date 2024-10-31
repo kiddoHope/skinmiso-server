@@ -301,7 +301,6 @@ app.post("/api/register-acc", limiter, [
       return res.status(500).json({ success: false, message: 'Error registering user' });
     }
   } catch (error) {
-    console.error(error.message); // Log only the error message
     res.status(500).json({ success: false, message: 'Internal server error', error: error.message }); // Return specific error message
   }
 });
@@ -348,8 +347,7 @@ app.post("/api/update-user-data", async (req,res) => {
     }
     return res.status(500).json({ success: false, message: "User not found or no changes made" });
   } catch (error) {
-    console.log(error);
-    
+    return res.status(500).json({ success: false, message: 'Internal server error', error: error.message }); // Return specific error message
   }
 
 
