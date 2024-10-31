@@ -12,8 +12,12 @@ const app = express();
 const port = 5000;
 const axios = require('axios')
 const atob = require('atob');
+const multer = require("multer");
+const FormData = require("form-data");
+const { Blob } = require("buffer");
 
 app.use(bodyParser.json());
+const upload = multer({ storage: multer.memoryStorage() });
 
 const allowedOrigins = ['https://skinmiso.ca', 'http://localhost:3000', 'https://skinmiso.vercel.app', 'https://skinmiso-ph-beta.vercel.app', 'http://localhost:3001'];
 
@@ -447,28 +451,44 @@ app.post('/api/update-address', async (req,res) => {
   }
 })
 
-// fetch address
+app.post("/api/upload-profile-picture", upload.single("file"), async (req, res) => {
+  const imageFile = req.file;
+  const customerID = req.body.customerID
+  const imgName = customerID + imageFile.originalname + generateRandomString(10)
+  
+  if (!imageFile) {
+    return res.status(400).send("No file uploaded.");
+  }
 
-// upload profile img
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     cb(null, '/skinmiso/'); // Change this to your desired upload folder
-//   },
-//   filename: (req, file, cb) => {
-//     cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname)); // File naming convention
-//   }
-// });
+  const formData = new FormData();
+  formData.append("file", imageFile.buffer, { filename: imageFile.originalname, contentType: imageFile.mimetype });
 
-// const upload = multer({ storage: storage });
-// // Create the upload endpoint
-// app.post('/api/upload-profile-pic', upload.single('profilePic'), (req, res) => {
-//   if (!req.file) {
-//     return res.status(400).send('No file uploaded.');
-//   }
-//   // Handle the uploaded file and save the URL or file name to your database
-//   const filePath = `https://2wave.io/skinmiso/profile/${req.file.filename}`; // Update this to the correct path
-//   res.status(200).json({ message: 'File uploaded successfully!', filePath });
-// });
+  try {
+    const response = await axios.post("https://2wave.io/skinmiso/php/upload-customer-profile.php", formData, {
+      headers: {
+        ...formData.getHeaders(), // Use getHeaders here for axios compatibility
+      },
+    });
+    
+    if (response.data.status === 'success') {
+      
+      const connection = await db.getConnection(); // Get a connection from the pool
+
+      const updateAddress = "UPDATE sk_customer_info SET user_profile_pic = ? WHERE user_customerID = ?"
+
+      const [updateRes] = await connection.query(updateAddress, [imgName, customerID]);
+      
+      if (updateRes.affectedRows > 0) {
+        return res.status(200).json({ success: true, message: 'Successfull Updated Profile ' });
+      } else {
+        console.log('error updating data');
+      }
+    }
+  } catch (error) {
+    return res.status(500).json({success:false, message : "unknown Internal Server Error"})
+  }
+});
+
 
 // fb login
 app.post("/api/connect-to-fb", async (req, res) => {
