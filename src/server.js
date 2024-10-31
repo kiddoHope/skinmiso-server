@@ -14,7 +14,6 @@ const axios = require('axios')
 const atob = require('atob');
 const multer = require("multer");
 const FormData = require("form-data");
-const { Blob } = require("buffer");
 
 app.use(bodyParser.json());
 const upload = multer({ storage: multer.memoryStorage() });
