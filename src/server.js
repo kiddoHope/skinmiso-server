@@ -214,41 +214,44 @@ app.post("/api/login", limiter, [
   const generatedSession = generateRandomString(20);
   const loginSession = 'sknms' + generatedSession + 'log';
 
-  const filterRegion = "SELECT * FROM sk_customer_credentials WHERE user_region = ?";
-  const findUserQuery = "SELECT * FROM sk_customer_credentials WHERE BINARY user_username = ? OR BINARY user_email = ?";
-  const updateSessionSql = "UPDATE sk_customer_credentials SET user_loginSession = ?, user_activity = 'active' WHERE BINARY user_username = ?";
+  const filterRegion = "SELECT * FROM sk_customer_credentials WHERE user_region = ?"
+  const [filterRegionResult] = await db.query(filterRegion, [region]);
 
   try {
-    // Step 1: Filter by region
-    const [filterRegionResult] = await db.query(filterRegion, [region]);
-
     if (filterRegionResult.length === 0) {
-      return res.status(404).json({ success: false, message: 'No users found' });
+      return res.status(404).json({ success: false, message: 'No users found' });     
     }
 
-    // Step 2: Find user by username or email within the specified region
-    const [result] = await db.query(findUserQuery, [username, username]);
+    // Prepare SQL query to find user by username or email
+    const sql = "SELECT * FROM sk_customer_credentials WHERE BINARY user_username = ? OR BINARY user_email = ?";
 
-    // Filter users in the specified region only
-    const user = result.find(user => user.user_region === region);
+    const [result] = await db.query(sql, [username, username]);
 
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'No account found' });
-    }
-
-    // Step 3: Check if password is correct
-    if (await bcrypt.compare(password, user.user_password)) {
-      const [updateResult] = await db.query(updateSessionSql, [loginSession, user.user_username]);
-      const customerID = user.user_customerID;
-
-      if (updateResult.affectedRows > 0) {
-        const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
-        return res.status(200).json({ success: true, message: 'Login successful', loginSession, token: authToken });
+    // Check if user exists and password is correct
+    if (result.length === 1) {
+      const user = result.find(user => user.user_region === region);
+      
+      if (await bcrypt.compare(password, user.user_password)) {
+        // Password matches, update login session
+        const updateSessionSql = "UPDATE sk_customer_credentials SET user_loginSession = ?, user_activity = 'active' WHERE BINARY user_username = ?";
+        const [updateResult] = await db.query(updateSessionSql, [loginSession, user.user_username]);
+        
+        const customerID = user.user_customerID
+        
+        if (updateResult.affectedRows > 0) {
+          // Generate JWT token for the user
+          const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
+          return res.status(200).json({ success: true, message: 'Login successful', loginSession, token: authToken });
+        } else {
+          return res.status(500).json({ success: false, message: 'Error creating session' });
+        }
       } else {
-        return res.status(500).json({ success: false, message: 'Error creating session' });
+        // Password doesn't match
+        return res.status(401).json({ success: false, message: 'Wrong password' });
       }
     } else {
-      return res.status(401).json({ success: false, message: 'Wrong password' });
+      // Username or email not found
+      return res.status(401).json({ success: false, message: 'No account found' });
     }
   } catch (error) {
     console.error('Database error:', error);
