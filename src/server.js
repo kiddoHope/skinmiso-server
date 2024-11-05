@@ -192,7 +192,7 @@ app.post("/api/user", authenticateToken, async (req, res) => {
 
 
 // Login endpoint
-app.post("/api/login", limiter,[
+app.post("/api/login", limiter, [
   body('username').notEmpty().withMessage('Username or email is required.'),
   body('password').notEmpty().withMessage('Password is required.')
 ], async (req, res) => {
@@ -200,52 +200,62 @@ app.post("/api/login", limiter,[
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const errorMessages = errors.array().map(error => error.msg);
-    
-    return res.status(400).json({ success: false, message: errorMessages[0] });
+    return res.status(400).json({ success: false, message: errorMessages[0] });  // Return only the first error message
   }
-  const { username, password } = req.body;
+
+  const { username, password, region } = req.body;
+
+  // Check that `region` is provided
+  if (!region) {
+    return res.status(400).json({ success: false, message: 'Region is required.' });
+  }
 
   // Generate login session
   const generatedSession = generateRandomString(20);
   const loginSession = 'sknms' + generatedSession + 'log';
 
-  try {
-    // Prepare SQL query to find user by username or email
-    const sql = "SELECT * FROM sk_customer_credentials WHERE BINARY user_username = ? OR BINARY user_email = ?";
-    const [result] = await db.query(sql, [username, username]);
-    
+  const filterRegion = "SELECT * FROM sk_customer_credentials WHERE user_region = ?";
+  const findUserQuery = "SELECT * FROM sk_customer_credentials WHERE BINARY user_username = ? OR BINARY user_email = ?";
+  const updateSessionSql = "UPDATE sk_customer_credentials SET user_loginSession = ?, user_activity = 'active' WHERE BINARY user_username = ?";
 
-    // Check if user exists and password is correct
-    if (result.length === 1) {
-      const user = result[0];
-      
-      if (await bcrypt.compare(password, user.user_password)) {
-        // Password matches, update login session
-        const updateSessionSql = "UPDATE sk_customer_credentials SET user_loginSession = ?, user_activity = 'active' WHERE BINARY user_username = ?";
-        const [updateResult] = await db.query(updateSessionSql, [loginSession, user.user_username]);
-        
-        const customerID = user.user_customerID
-        
-        if (updateResult.affectedRows > 0) {
-          // Generate JWT token for the user
-          const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
-          return res.status(200).json({ success: true, message: 'Login successful', loginSession, token: authToken });
-        } else {
-          return res.status(500).json({ success: false, message: 'Error creating session' });
-        }
+  try {
+    // Step 1: Filter by region
+    const [filterRegionResult] = await db.query(filterRegion, [region]);
+
+    if (filterRegionResult.length === 0) {
+      return res.status(404).json({ success: false, message: 'No users found' });
+    }
+
+    // Step 2: Find user by username or email within the specified region
+    const [result] = await db.query(findUserQuery, [username, username]);
+
+    // Filter users in the specified region only
+    const user = result.find(user => user.user_region === region);
+
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'No account found' });
+    }
+
+    // Step 3: Check if password is correct
+    if (await bcrypt.compare(password, user.user_password)) {
+      const [updateResult] = await db.query(updateSessionSql, [loginSession, user.user_username]);
+      const customerID = user.user_customerID;
+
+      if (updateResult.affectedRows > 0) {
+        const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
+        return res.status(200).json({ success: true, message: 'Login successful', loginSession, token: authToken });
       } else {
-        // Password doesn't match
-        return res.status(401).json({ success: false, message: 'Wrong password' });
+        return res.status(500).json({ success: false, message: 'Error creating session' });
       }
     } else {
-      // Username or email not found
-      return res.status(401).json({ success: false, message: 'No account found' });
+      return res.status(401).json({ success: false, message: 'Wrong password' });
     }
   } catch (error) {
     console.error('Database error:', error);
     return res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
 });
+
 // create account
 app.post("/api/register-acc", limiter, [
   body('email').isEmail().withMessage('Invalid email format.'),
@@ -262,7 +272,7 @@ app.post("/api/register-acc", limiter, [
     }
 
     const customerID = 'skms_' + generateRandomString(10);
-    const { email, mobileno, username, password, referral } = req.body;
+    const { email, mobileno, username, password, referral,region } = req.body;
 
     let ref
     
@@ -300,15 +310,15 @@ app.post("/api/register-acc", limiter, [
     } else (
       ref = referral
     )
-    
+
     const hash_pass = await bcrypt.hash(password, 10);
     const generatedSession = generateRandomString(10);
     const userRole = 'customer';
     const loginSession = 'sknms' + generatedSession + 'log';
     const activity = 'active';
 
-    const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_role, user_referral, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, userRole, ref, activity, loginSession]);
+    const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_role, user_referral,user_region, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, userRole, ref, region, activity, loginSession]);
 
     if (insertResult.affectedRows > 0) {
 
@@ -660,7 +670,7 @@ app.post("/api/connect-to-fb", async (req, res) => {
 
 // connect to google
 app.post('/api/google-signin', async (req, res) => {
-  const { data } = req.body;
+  const { data,region } = req.body;
 
   const decoded = jwtDecode(data)
 
