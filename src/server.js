@@ -135,7 +135,8 @@ function generateRandomString(length = 10) {
 app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
   try {
     const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
-    const userData = allusers.filter(user => user.user_customerID === req.user.customerID);
+    const userData = allusers.filter(user => user.user_customerID.trim() === req.user.customerID.trim());
+
     if (!userData) {
       return res.status(404).json({ message: "User data not found" });
     }
@@ -198,7 +199,9 @@ app.post("/api/login", limiter,[
 
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
+    const errorMessages = errors.array().map(error => error.msg);
+    
+    return res.status(400).json({ success: false, message: errorMessages[0] });
   }
   const { username, password } = req.body;
 
@@ -208,8 +211,9 @@ app.post("/api/login", limiter,[
 
   try {
     // Prepare SQL query to find user by username or email
-    const sql = "SELECT * FROM sk_customer_credentials WHERE (user_username = ? OR user_email = ?)";
+    const sql = "SELECT * FROM sk_customer_credentials WHERE BINARY user_username = ? OR BINARY user_email = ?";
     const [result] = await db.query(sql, [username, username]);
+    
 
     // Check if user exists and password is correct
     if (result.length === 1) {
@@ -217,7 +221,7 @@ app.post("/api/login", limiter,[
       
       if (await bcrypt.compare(password, user.user_password)) {
         // Password matches, update login session
-        const updateSessionSql = "UPDATE sk_customer_credentials SET user_loginSession = ?, user_activity = 'active' WHERE user_username = ?";
+        const updateSessionSql = "UPDATE sk_customer_credentials SET user_loginSession = ?, user_activity = 'active' WHERE BINARY user_username = ?";
         const [updateResult] = await db.query(updateSessionSql, [loginSession, user.user_username]);
         
         const customerID = user.user_customerID
@@ -252,19 +256,23 @@ app.post("/api/register-acc", limiter, [
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, errors: errors.array() });
+      const errorMessages = errors.array().map(error => error.msg);
+      
+      return res.status(400).json({ success: false, message: errorMessages[0] });
     }
 
     const customerID = 'skms_' + generateRandomString(10);
-    const { email, mobileno, username, password } = req.body;
+    const { email, mobileno, username, password, referral } = req.body;
 
-    const usernameCheckSql = "SELECT * FROM sk_customer_credentials WHERE user_username = ?";
+    let ref
+    
+    const usernameCheckSql = "SELECT * FROM sk_customer_credentials WHERE BINARY user_username = ?";
     const [usernameCheckResults] = await db.query(usernameCheckSql, [username]);
     if (usernameCheckResults.length > 0) {
       return res.status(400).json({ success: false, message: 'Username already exists' });
     }
 
-    const emailCheckSql = "SELECT * FROM sk_customer_credentials WHERE user_email = ?";
+    const emailCheckSql = "SELECT * FROM sk_customer_credentials WHERE BINARY user_email = ?";
     const [emailCheckResults] = await db.query(emailCheckSql, [email]);
     if (emailCheckResults.length > 0) {
       return res.status(400).json({ success: false, message: 'Email already exists' });
@@ -278,20 +286,34 @@ app.post("/api/register-acc", limiter, [
       }
     }
 
+    
+    if (referral !== "") {
+      const referralCheckSql = "SELECT * FROM sk_participant_info WHERE user_participant_referral = ?";
+      const [referralCheckResults] = await db.query(referralCheckSql, [referral]);
+      if (referralCheckResults.length === 0) {
+        return res.status(400).json({ success: false, message: 'Referral Code Does not exist' });
+      }
+    }
+
+    if (referral === '') {
+      ref = 'def'
+    } else (
+      ref = referral
+    )
+    
     const hash_pass = await bcrypt.hash(password, 10);
     const generatedSession = generateRandomString(10);
     const userRole = 'customer';
     const loginSession = 'sknms' + generatedSession + 'log';
     const activity = 'active';
 
-    const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_role, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-    const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, userRole, activity, loginSession]);
+    const insertSql = "INSERT INTO sk_customer_credentials (user_customerID, user_mobileno, user_email, user_username, user_password, user_role, user_referral, user_activity, user_loginSession) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const [insertResult] = await db.query(insertSql, [customerID, mobileno, email, username, hash_pass, userRole, ref, activity, loginSession]);
 
     if (insertResult.affectedRows > 0) {
 
       const insertInfo = "INSERT INTO sk_customer_info (user_customerID) VALUES (?)";
       const [insertInfoResult] = await db.query(insertInfo, [customerID]);
-      
 
       if (insertInfoResult.affectedRows > 0) {
         const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
@@ -370,7 +392,7 @@ app.post("/api/logout", authenticateToken, async (req, res) => {
     try {
       // Check if the user exists
       const [userResult] = await connection.query(
-        'SELECT * FROM sk_customer_credentials WHERE user_username = ?',
+        'SELECT * FROM sk_customer_credentials WHERE BINARY user_username = ?',
         [username]
       );
 
@@ -485,6 +507,64 @@ app.post("/api/upload-profile-picture", upload.single("file"), async (req, res) 
     return res.status(500).json({success:false, message : "unknown Internal Server Error"})
   }
 });
+
+
+
+const forgotPassCode = (length) => {
+  const charset = "1234567890";
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * charset.length);
+    result += charset.charAt(randomIndex);
+  }
+  return result;
+};
+
+// verify user
+app.post('/api/verify-email', async (req, res) => {
+  const { to } = req.body;
+  
+  if (to.length > 0) {
+    
+    const codePass = forgotPassCode(6)
+    const subject = "Verify Email";
+    const htmlContent = renderToStaticMarkup(
+      React.createElement(Confirmation, { codePass })
+    );
+
+    
+    const jwtCode = jwt.sign({ codePass }, jwtSecret, { expiresIn: "7d" });
+
+    let transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // true for 465, false for other ports
+      auth: {
+        user: 'skinmisocanada@gmail.com',
+        pass: 'zknk mxbf qxrs qfyp',
+      },
+      tls: {
+        ciphers: 'SSLv3',
+      }
+    });
+    try {
+      let info = transporter.sendMail({
+        from: '"Attract Game Support" <skinmisocanada@gmail.com>', // sender address
+        to: to,
+        subject: subject,
+        html: htmlContent, // use HTML version of the email
+      });
+      
+      res.status(200).json({ message: 'Email sent successfully', jtdcd: jwtCode});
+    } catch (error) {
+      console.error('Error sending email:', error);
+      res.status(500).send('Error sending email');
+    }
+  } else {
+    res.json({ message: 'Email not found'});
+  }
+});
+
 
 
 // fb login
