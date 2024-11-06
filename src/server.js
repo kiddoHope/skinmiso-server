@@ -343,7 +343,7 @@ app.post("/api/register-acc", limiter, [
 });
 
 // Updata endpoint
-app.post("/api/update-user-data", async (req,res) => {
+app.post("/api/update-user-data",authenticateToken, async (req,res) => {
   const {userData} = req.body
 
   if (!userData) {
@@ -389,6 +389,52 @@ app.post("/api/update-user-data", async (req,res) => {
 
 })
 
+
+app.post("/api/update-participant-data",authenticateToken, async (req,res) => {
+  const {userData} = req.body
+
+  if (!userData) {
+    res.status(500).json({success:false, message: "No data retrieve"})
+  }
+  
+  const customerID = userData.user_customerID
+
+  const email = userData.user_email;
+  const mobileno = userData.user_mobileno
+  const firstName = userData.user_first_name;
+  const lastName = userData.user_last_name;
+  const gender = userData.user_gender;
+  const bday = userData.user_birthday
+
+
+  try {
+    const updateUsercred = `
+      UPDATE sk_customer_credentials 
+      SET user_email = ?, user_mobileno = ? 
+      WHERE user_customerID = ?`;
+    const [updateUsercredRes] = await db.query(updateUsercred, [email, mobileno, customerID]);
+
+    if (updateUsercredRes.affectedRows > 0) {
+      const updataUserInfo = `
+      UPDATE sk_customer_info 
+      SET user_first_name = ?, user_last_name = ?,user_gender = ? ,user_birthday = ?
+      WHERE user_customerID = ?`;
+      
+      const [updateUserInfoRes] = await db.query(updataUserInfo, [firstName, lastName,gender,bday, customerID]);
+
+      if (updateUserInfoRes.affectedRows > 0) {
+        return res.status(200).json({ success: true, message: "User data updated successfully" });
+      } else {
+        return res.status(500).json({ success: false, message: "User not found or no changes made" });
+      }
+    }
+    return res.status(500).json({ success: false, message: "User not found or no changes made" });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Internal server error', error: error.message }); // Return specific error message
+  }
+
+
+})
 
 // Logout endpoint
 app.post("/api/logout", authenticateToken, async (req, res) => {
