@@ -495,7 +495,7 @@ app.post('/api/update-address',authenticateToken, async (req,res) => {
     const region = addressData.region
     const state = addressData.state
     const street = addressData.street
-    const area = addressData.street
+    const area = addressData.area
 
     const [checkCustomerAddress] = await connection.query(
       'SELECT * FROM sk_customer_address WHERE user_customerID = ?',
@@ -503,7 +503,7 @@ app.post('/api/update-address',authenticateToken, async (req,res) => {
     );
 
     if (checkCustomerAddress.length > 0) {
-      const updateAddress = "UPDATE sk_customer_address SET user_country = ?, user_state = ?, user_area, user_region = ?,user_district = ?, user_city = ?, user_postal_code = ?, user_street = ?, user_houseNo = ?, user_address_label = ? WHERE user_customerID = ?"
+      const updateAddress = "UPDATE sk_customer_address SET user_country = ?, user_state = ?, user_area = ?, user_region = ?,user_district = ?, user_city = ?, user_postal_code = ?, user_street = ?, user_houseNo = ?, user_address_label = ? WHERE user_customerID = ?"
 
       const [updateRes] = await connection.query(updateAddress, [country, state, area, region, district, city, postalCode, street, houseNumber, addressLabel, customerID]);
 
