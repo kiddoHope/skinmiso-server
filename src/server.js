@@ -531,6 +531,11 @@ app.post("/api/upload-profile-picture",authenticateToken, upload.single("profile
   const profileFile = req.file;
   const customerID = req.body.customerID
   const imgName = customerID + profileFile.originalname
+
+  console.log(profileFile);
+  console.log(customerID);
+  
+  
   
   if (!profileFile) {
     return res.status(400).send("No file uploaded.");
