@@ -169,6 +169,7 @@ app.post("/api/user", authenticateToken, async (req, res) => {
     const [allusers] = await db.query("SELECT * FROM sk_customer_credentials");
     const [allusersInfo] = await db.query("SELECT * FROM sk_customer_info");
     const [allusersAddress] = await db.query("SELECT * FROM sk_customer_address");
+    const [allParticipantData] = await db.query("SELECT * FROM sk_participant_info");
     
     const userData = allusers.filter(user => user.user_customerID === authDecode.customerID);
     const cleanedUserData = userData.map(({ id, user_loginSession, user_password, ...rest }) => rest);
@@ -176,9 +177,14 @@ app.post("/api/user", authenticateToken, async (req, res) => {
     const cleanedUserInfo = userInfo.map(({ id, ...rest }) => rest)
     const userAddress = allusersAddress.filter(user => user.user_customerID === authDecode.customerID)
     const cleanedAddress = userAddress.map(({ id, user_customerID, ...rest }) => rest)
+    const participantData = allParticipantData.filter(user => user.user_customerID === authDecode.customerID)
+    const cleanedParticpantData = participantData.map(({ id, user_customerID, ...rest }) => rest)
+   
     
-    const userinfo = [{ ...cleanedUserData[0], ...cleanedUserInfo[0], ...cleanedAddress[0] }];
+    const userinfo = [{ ...cleanedUserData[0], ...cleanedUserInfo[0], ...cleanedAddress[0], ...cleanedParticpantData[0] }];
     
+
+
     if (userData.length > 0) {
       return res.status(200).json({ success: true, data: userinfo });
     } else {
@@ -359,7 +365,6 @@ app.post("/api/update-user-data",authenticateToken, async (req,res) => {
   const gender = userData.user_gender;
   const bday = userData.user_birthday
 
-
   try {
     const updateUsercred = `
       UPDATE sk_customer_credentials 
@@ -390,45 +395,37 @@ app.post("/api/update-user-data",authenticateToken, async (req,res) => {
 })
 
 
-app.post("/api/update-participant-data",authenticateToken, async (req,res) => {
-  const {userData} = req.body
-
-  if (!userData) {
+app.post("/api/update-social-data",authenticateToken, async (req,res) => {
+  const {socialLinks} = req.body
+  
+  if (!socialLinks) {
     res.status(500).json({success:false, message: "No data retrieve"})
   }
   
-  const customerID = userData.user_customerID
-
-  const email = userData.user_email;
-  const mobileno = userData.user_mobileno
-  const firstName = userData.user_first_name;
-  const lastName = userData.user_last_name;
-  const gender = userData.user_gender;
-  const bday = userData.user_birthday
-
+  const customerID = socialLinks.customerID
+  const facebook = socialLinks.facebook
+  const instagram = socialLinks.instagram
+  const tiktok = socialLinks.tiktok
 
   try {
-    const updateUsercred = `
-      UPDATE sk_customer_credentials 
-      SET user_email = ?, user_mobileno = ? 
-      WHERE user_customerID = ?`;
-    const [updateUsercredRes] = await db.query(updateUsercred, [email, mobileno, customerID]);
+    const connection = await db.getConnection();
 
-    if (updateUsercredRes.affectedRows > 0) {
-      const updataUserInfo = `
-      UPDATE sk_customer_info 
-      SET user_first_name = ?, user_last_name = ?,user_gender = ? ,user_birthday = ?
-      WHERE user_customerID = ?`;
+    const [checkRegisteredID] = await connection.query('SELECT * FROM sk_participant_info WHERE BINARY user_customerID = ?',[customerID]);
+    if (checkRegisteredID.length === 0) {
+      const insertParticipant = "INSERT INTO sk_participant_info (user_customerID, user_participant_facebook, user_participant_instagram, user_participant_tiktok) VALUES (?, ?, ?, ?)";
+      const [insertParticipantRes] = await db.query(insertParticipant, [customerID, facebook, instagram, tiktok]);
+      if (insertParticipantRes.affectedRows > 0) {
+        return res.status(200).json({ success: true, message: "Participant Data Added successfully" });
+      }
+    } else {
+      const updateParticipant = 'UPDATE sk_participant_info SET user_participant_facebook = ?, user_participant_instagram = ?, user_participant_tiktok = ? WHERE user_customerID = ?';
+      const [updateParticipantRes] = await connection.query(updateParticipant, [facebook, instagram, tiktok, customerID]);
       
-      const [updateUserInfoRes] = await db.query(updataUserInfo, [firstName, lastName,gender,bday, customerID]);
-
-      if (updateUserInfoRes.affectedRows > 0) {
-        return res.status(200).json({ success: true, message: "User data updated successfully" });
-      } else {
-        return res.status(500).json({ success: false, message: "User not found or no changes made" });
+      if (updateParticipantRes.affectedRows > 0) {
+        return res.status(200).json({ success: true, message: "Participant Socials successfully updated" });
       }
     }
-    return res.status(500).json({ success: false, message: "User not found or no changes made" });
+    
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Internal server error', error: error.message }); // Return specific error message
   }
@@ -446,7 +443,7 @@ app.post("/api/logout", authenticateToken, async (req, res) => {
 
   try {
     // Use the connection pool to query the database
-    const connection = await db.getConnection(); // Get a connection from the pool
+    const connection = await db.getConnection(); 
 
     try {
       // Check if the user exists
@@ -479,7 +476,7 @@ app.post("/api/logout", authenticateToken, async (req, res) => {
 });
 
 // update Address 
-app.post('/api/update-address', async (req,res) => {
+app.post('/api/update-address',authenticateToken, async (req,res) => {
   const {addressData} = req.body;
   
   if (!addressData) {
@@ -529,17 +526,17 @@ app.post('/api/update-address', async (req,res) => {
   }
 })
 
-app.post("/api/upload-profile-picture", upload.single("file"), async (req, res) => {
-  const imageFile = req.file;
+app.post("/api/upload-profile-picture",authenticateToken, upload.single("profilePic"), async (req, res) => {
+  const profileFile = req.file;
   const customerID = req.body.customerID
-  const imgName = customerID + imageFile.originalname
+  const imgName = customerID + profileFile.originalname
   
-  if (!imageFile) {
+  if (!profileFile) {
     return res.status(400).send("No file uploaded.");
   }
 
   const formData = new FormData();
-  formData.append("file", imageFile.buffer, { filename: imgName, contentType: imageFile.mimetype });
+  formData.append("profilePic", profileFile.buffer, { filename: imgName, contentType: profileFile.mimetype });
 
   try {
     const response = await axios.post("https://2wave.io/skinmiso/php/upload-customer-profile.php", formData, {
@@ -566,6 +563,108 @@ app.post("/api/upload-profile-picture", upload.single("file"), async (req, res) 
     return res.status(500).json({success:false, message : "unknown Internal Server Error"})
   }
 });
+
+app.post("/api/upload-cover-photo",authenticateToken, upload.single("coverPhoto"), async (req, res) => {
+  const coverFile = req.file;
+  const customerID = req.body.customerID
+  const imgName = customerID + coverFile.originalname
+  console.log(coverFile, customerID);
+  
+  if (!coverFile) {
+    return res.status(400).send("No file uploaded.");
+  }
+
+  const formData = new FormData();
+  formData.append("coverPhoto", coverFile.buffer, { filename: imgName, contentType: coverFile.mimetype });
+
+  try {
+    const response = await axios.post("https://2wave.io/skinmiso/php/upload-cover-photo.php", formData, {
+      headers: {
+        ...formData.getHeaders(), // Use getHeaders here for axios compatibility
+      },
+    });
+    
+    if (response.data.status === 'success') {
+      
+      const connection = await db.getConnection(); // Get a connection from the pool
+
+      const updateAddress = "UPDATE sk_customer_info SET user_cover_photo = ? WHERE user_customerID = ?"
+
+      const [updateRes] = await connection.query(updateAddress, [imgName, customerID]);
+      
+      if (updateRes.affectedRows > 0) {
+        return res.status(200).json({ success: true, message: 'Successfull Updated Cover Photo ' });
+      } else {
+        console.log('error updating data');
+      }
+    }
+  } catch (error) {
+    return res.status(500).json({success:false, message : "unknown Internal Server Error"})
+  }
+});
+
+
+app.post("/api/upload-facecard-picture", authenticateToken, upload.fields([
+  { name: "cardImage", maxCount: 1 },
+  { name: "faceCard1", maxCount: 1 },
+  { name: "faceCard2", maxCount: 1 }
+]), async (req, res) => {
+  const customerID = req.body.customerID;
+  // Extract files from the request
+  const cardImageFile = req.files["cardImage"] ? req.files["cardImage"][0] : null;
+  const faceCard1File = req.files["faceCard1"] ? req.files["faceCard1"][0] : null;
+  const faceCard2File = req.files["faceCard2"] ? req.files["faceCard2"][0] : null;
+
+  // Check if any required file is missing
+  if (!cardImageFile || !faceCard1File || !faceCard2File) {
+    return res.status(400).send("Missing one or more files.");
+  }
+
+  // Create FormData to send to the next endpoint
+  const formData = new FormData();
+  formData.append("cardImage", cardImageFile.buffer, { filename: customerID + cardImageFile.originalname, contentType: cardImageFile.mimetype });
+  formData.append("faceCard1", faceCard1File.buffer, { filename: customerID + faceCard1File.originalname, contentType: faceCard1File.mimetype });
+  formData.append("faceCard2", faceCard2File.buffer, { filename: customerID + faceCard2File.originalname, contentType: faceCard2File.mimetype });
+
+  try {
+    // Send the form data to another server (PHP server)
+    const response = await axios.post("https://2wave.io/skinmiso/php/upload-facecards.php", formData, {
+      headers: {
+        ...formData.getHeaders(), // Get correct headers for form data
+      },
+    });
+
+    // If successful, update database
+    if (response.data.status === "success") {
+      const connection = await db.getConnection();
+      const updateQuery = `UPDATE sk_participant_info SET user_participant_card_img = ?, user_participant_facecard_1 = ?, user_participant_facecard_2 = ? WHERE user_customerID = ?`;
+
+      const [updateRes] = await connection.query(updateQuery, [
+        customerID + cardImageFile.originalname,
+        customerID + faceCard1File.originalname,
+        customerID + faceCard2File.originalname,
+        customerID,
+      ]);
+      
+
+      if (updateRes.affectedRows > 0) {
+        return res.status(200).json({ success: true, message: "Successfully updated facecard pictures." });
+      } else {
+        return res.status(500).json({ success: false, message: "Error updating database" });
+      }
+    } else {
+      return res.status(500).json({ success: false, message: "Error uploading to PHP server" });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Unknown internal server error" });
+  }
+});
+
+
+
+
+
 
 
 
