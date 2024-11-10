@@ -657,12 +657,24 @@ app.post("/api/upload-facecard-picture", authenticateToken, upload.fields([
       return res.status(500).json({ success: false, message: "Error uploading to PHP server" });
     }
   } catch (error) {
-    console.error(error);
     return res.status(500).json({ success: false, message: "Unknown internal server error" });
   }
 });
 
 
+app.post('/api/participant-list',async (req,res) => {  
+  const connection = await db.getConnection()
+
+  const getAlluser = 'SELECT * FROM sk_participant_info'
+  const [getAlluserRes] = await connection.query(getAlluser);
+
+  const approvedUsers = getAlluserRes.filter(users => users.user_participant_approved === 'approved')
+  if (approvedUsers.length > 0) {
+    return res.status(200).json({ success: true, users: approvedUsers });
+  } else {
+    return res.status(500).json({ success: false, message: "Unknown internal server error" });
+  }
+})
 
 
 
