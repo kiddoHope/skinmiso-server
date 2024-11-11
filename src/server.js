@@ -664,8 +664,6 @@ app.post("/api/upload-facecard-picture", authenticateToken, upload.fields([
 
 app.post('/api/participant-list',async (req,res) => {  
   const {region} = req.body
-  console.log(region);
-  
 
   const connection = await db.getConnection();
   const [alldataUsers] = await connection.query(`
@@ -681,11 +679,8 @@ app.post('/api/participant-list',async (req,res) => {
         ON sk_participant_info.user_customerID = sk_customer_credentials.user_customerID COLLATE utf8mb4_unicode_ci
   `);
 
-  console.log(alldataUsers);
-  
 
   const approvedUsers = alldataUsers.filter(users => users.user_region === region)
-  console.log(approvedUsers);
   
   if (approvedUsers.length > 0) {
     return res.status(200).json({ success: true, users: approvedUsers });
