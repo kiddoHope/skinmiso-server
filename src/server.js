@@ -371,6 +371,8 @@ app.post("/api/update-user-data",authenticateToken, async (req,res) => {
   const description = userData.user_participant_description
   const approval = userData.user_participant_approved
   
+  console.log(typeof talent, typeof talent === 'undefined');
+  
   try {
     const updateUsercred = `
       UPDATE sk_customer_credentials 
@@ -388,21 +390,21 @@ app.post("/api/update-user-data",authenticateToken, async (req,res) => {
 
       if (updateUserInfoRes.affectedRows > 0) {
         if (typeof talent === 'undefined') {
-          
           return res.status(200).json({ success: false, message: "User data successfully updated" });
         } else {
+          const updateParticipantInfo = `
+          UPDATE sk_participant_info 
+          SET user_participant_description = ?, user_participant_profession = ?, user_participant_talent = ? ,user_participant_approved = ?
+          WHERE user_customerID = ?`;
+          
+          const [updateParticipantRes] = await db.query(updateParticipantInfo, [description, profession,talent,approval, customerID]);
+          if (updateParticipantRes.affectedRows > 0) {
+            return res.status(200).json({ success: false, message: "User data successfully updated" });
+          }
           return res.status(200).json({ success: false, message: "User data successfully updated" });
         }
       } else {
-        const updateParticipantInfo = `
-        UPDATE sk_participant_info 
-        SET user_participant_description = ?, user_participant_profession = ?, user_participant_talent = ? ,user_participant_approved = ?
-        WHERE user_customerID = ?`;
-        
-        const [updateParticipantRes] = await db.query(updateParticipantInfo, [description, profession,talent,approval, customerID]);
-        if (updateParticipantRes.affectedRows > 0) {
-          return res.status(200).json({ success: false, message: "User data successfully updated" });
-        }
+        return res.status(500).json({ success: false, message: "User not found or no changes made" });
       }
     }
     return res.status(500).json({ success: false, message: "User not found or no changes made" });
