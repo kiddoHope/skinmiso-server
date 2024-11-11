@@ -668,6 +668,19 @@ app.post('/api/participant-list',async (req,res) => {
   const getAlluser = 'SELECT * FROM sk_participant_info'
   const [getAlluserRes] = await connection.query(getAlluser);
 
+  const [alldataUsers] = await connection.query(`
+    SELECT 
+        sk_participant_info.user_customerID,
+        sk_participant_info.*, 
+        sk_customer_info.*
+    FROM sk_participant_info
+    INNER JOIN sk_customer_info 
+        ON sk_participant_info.user_customerID = sk_customer_info.user_customerID
+    `);
+
+
+  console.log(alldataUsers)
+
   const approvedUsers = getAlluserRes.filter(users => users.user_participant_approved === 'approved')
   if (approvedUsers.length > 0) {
     return res.status(200).json({ success: true, users: approvedUsers });
