@@ -370,7 +370,7 @@ app.post("/api/update-user-data",authenticateToken, async (req,res) => {
   const talent = userData.user_participant_talent
   const description = userData.user_participant_description
   const approval = userData.user_participant_approved
-
+  
   try {
     const updateUsercred = `
       UPDATE sk_customer_credentials 
@@ -387,17 +387,22 @@ app.post("/api/update-user-data",authenticateToken, async (req,res) => {
       const [updateUserInfoRes] = await db.query(updataUserInfo, [firstName, lastName,gender,bday, customerID]);
 
       if (updateUserInfoRes.affectedRows > 0) {
+        if (typeof talent === 'undefined') {
+          
+          return res.status(200).json({ success: false, message: "User data successfully updated" });
+        } else {
+          return res.status(200).json({ success: false, message: "User data successfully updated" });
+        }
+      } else {
         const updateParticipantInfo = `
         UPDATE sk_participant_info 
         SET user_participant_description = ?, user_participant_profession = ?, user_participant_talent = ? ,user_participant_approved = ?
         WHERE user_customerID = ?`;
         
-      const [updateParticipantRes] = await db.query(updateParticipantInfo, [description, profession,talent,approval, customerID]);
+        const [updateParticipantRes] = await db.query(updateParticipantInfo, [description, profession,talent,approval, customerID]);
         if (updateParticipantRes.affectedRows > 0) {
           return res.status(200).json({ success: false, message: "User data successfully updated" });
         }
-      } else {
-        return res.status(500).json({ success: false, message: "User not found or no changes made" });
       }
     }
     return res.status(500).json({ success: false, message: "User not found or no changes made" });
@@ -425,6 +430,8 @@ app.post("/api/update-social-data",authenticateToken, async (req,res) => {
     const connection = await db.getConnection();
 
     const [checkRegisteredID] = await connection.query('SELECT * FROM sk_participant_info WHERE BINARY user_customerID = ?',[customerID]);
+    console.log(checkRegisteredID[0]);
+    
     if (checkRegisteredID.length === 0) {
       const insertParticipant = "INSERT INTO sk_participant_info (user_customerID, user_participant_facebook, user_participant_instagram, user_participant_tiktok) VALUES (?, ?, ?, ?)";
       const [insertParticipantRes] = await db.query(insertParticipant, [customerID, facebook, instagram, tiktok]);
@@ -680,26 +687,30 @@ app.post('/api/participant-list',async (req,res) => {
   const {region} = req.body
 
   const connection = await db.getConnection();
-  const [alldataUsers] = await connection.query(`
-    SELECT 
-        sk_participant_info.user_customerID,
-        sk_participant_info.*, 
-        sk_customer_info.*,
-        sk_customer_credentials.*
-    FROM sk_participant_info
-    INNER JOIN sk_customer_info 
-        ON sk_participant_info.user_customerID = sk_customer_info.user_customerID COLLATE utf8mb4_unicode_ci
-    INNER JOIN sk_customer_credentials 
-        ON sk_participant_info.user_customerID = sk_customer_credentials.user_customerID COLLATE utf8mb4_unicode_ci
-  `);
-
-
-  const approvedUsers = alldataUsers.filter(users => users.user_region === region)
+  try {
+    const [alldataUsers] = await connection.query(`
+      SELECT 
+          sk_participant_info.user_customerID,
+          sk_participant_info.*, 
+          sk_customer_info.*,
+          sk_customer_credentials.*
+      FROM sk_participant_info
+      INNER JOIN sk_customer_info 
+          ON sk_participant_info.user_customerID = sk_customer_info.user_customerID COLLATE utf8mb4_unicode_ci
+      INNER JOIN sk_customer_credentials 
+          ON sk_participant_info.user_customerID = sk_customer_credentials.user_customerID COLLATE utf8mb4_unicode_ci
+    `);
   
-  if (approvedUsers.length > 0) {
-    return res.status(200).json({ success: true, users: approvedUsers });
-  } else {
-    return res.status(500).json({ success: false, message: "Unknown internal server error" });
+  
+    const approvedUsers = alldataUsers.filter(users => users.user_region === region)
+    
+    if (approvedUsers.length > 0) {
+      return res.status(200).json({ success: true, users: approvedUsers });
+    } else {
+      return res.status(500).json({ success: false, message: "no user fetch" });
+    }
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Unknown internal server error", error : error});
   }
 })
 
