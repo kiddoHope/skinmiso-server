@@ -365,13 +365,18 @@ app.post("/api/update-user-data",authenticateToken, async (req,res) => {
   const lastName = userData.user_last_name;
   const gender = userData.user_gender;
   const bday = userData.user_birthday
+  const username = userData.user_username
+  const profession = userData.user_participant_profession
+  const talent = userData.user_participant_talent
+  const description = userData.user_participant_description
+  const approval = userData.user_participant_approved
 
   try {
     const updateUsercred = `
       UPDATE sk_customer_credentials 
-      SET user_email = ?, user_mobileno = ? 
+      SET user_email = ?, user_mobileno = ?, user_username = ?
       WHERE user_customerID = ?`;
-    const [updateUsercredRes] = await db.query(updateUsercred, [email, mobileno, customerID]);
+    const [updateUsercredRes] = await db.query(updateUsercred, [email, mobileno,username, customerID]);
 
     if (updateUsercredRes.affectedRows > 0) {
       const updataUserInfo = `
@@ -382,7 +387,15 @@ app.post("/api/update-user-data",authenticateToken, async (req,res) => {
       const [updateUserInfoRes] = await db.query(updataUserInfo, [firstName, lastName,gender,bday, customerID]);
 
       if (updateUserInfoRes.affectedRows > 0) {
-        return res.status(200).json({ success: true, message: "User data updated successfully" });
+        const updateParticipantInfo = `
+        UPDATE sk_participant_info 
+        SET user_participant_description = ?, user_participant_profession = ?, user_participant_talent = ? ,user_participant_approved = ?
+        WHERE user_customerID = ?`;
+        
+      const [updateParticipantRes] = await db.query(updateParticipantInfo, [description, profession,talent,approval, customerID]);
+        if (updateParticipantRes.affectedRows > 0) {
+          return res.status(200).json({ success: false, message: "User data successfully updated" });
+        }
       } else {
         return res.status(500).json({ success: false, message: "User not found or no changes made" });
       }
