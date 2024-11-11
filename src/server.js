@@ -663,25 +663,30 @@ app.post("/api/upload-facecard-picture", authenticateToken, upload.fields([
 
 
 app.post('/api/participant-list',async (req,res) => {  
-  const connection = await db.getConnection()
+  const {region} = req.body
+  console.log(region);
+  
 
-  const getAlluser = 'SELECT * FROM sk_participant_info'
-  const [getAlluserRes] = await connection.query(getAlluser);
-
+  const connection = await db.getConnection();
   const [alldataUsers] = await connection.query(`
     SELECT 
         sk_participant_info.user_customerID,
         sk_participant_info.*, 
-        sk_customer_info.*
+        sk_customer_info.*,
+        sk_customer_credentials.*
     FROM sk_participant_info
     INNER JOIN sk_customer_info 
-        ON sk_participant_info.user_customerID = sk_customer_info.user_customerID
-    `);
+        ON sk_participant_info.user_customerID = sk_customer_info.user_customerID COLLATE utf8mb4_unicode_ci
+    INNER JOIN sk_customer_credentials 
+        ON sk_participant_info.user_customerID = sk_customer_credentials.user_customerID COLLATE utf8mb4_unicode_ci
+  `);
 
+  console.log(alldataUsers);
+  
 
-  console.log(alldataUsers)
-
-  const approvedUsers = getAlluserRes.filter(users => users.user_participant_approved === 'approved')
+  const approvedUsers = alldataUsers.filter(users => users.user_region === region)
+  console.log(approvedUsers);
+  
   if (approvedUsers.length > 0) {
     return res.status(200).json({ success: true, users: approvedUsers });
   } else {
