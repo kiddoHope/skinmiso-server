@@ -35,14 +35,6 @@ app.use(cors({
   credentials: true, // Allow credentials (cookies, etc.) in CORS requests
 }));
 
-// Handle preflight requests
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin);
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-access-token, X-Requested-With, Accept');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.sendStatus(204);
-});
 
 // Set Vary header to Origin
 app.use((req, res, next) => {
