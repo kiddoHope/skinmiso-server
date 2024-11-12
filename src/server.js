@@ -20,22 +20,35 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const allowedOrigins = ['https://skinmiso.ca', 'http://localhost:3000', 'https://skinmiso.vercel.app', 'https://skinmiso-ph-beta.vercel.app', 'http://localhost:3001'];
 
-// app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin, like mobile apps or curl requests
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With', 'Accept'],
+  credentials: true, // Allow credentials (cookies, etc.) in CORS requests
+}));
 
-// // Handle preflight requests
-// app.options('*', (req, res) => {
-//   res.header('Access-Control-Allow-Origin', req.headers.origin);
-//   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-//   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-access-token, X-Requested-With, Accept');
-//   res.header('Access-Control-Allow-Credentials', 'true');
-//   res.sendStatus(204);
-// });
+// Handle preflight requests
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-access-token, X-Requested-With, Accept');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(204);
+});
 
-// // Set Vary header to Origin
-// app.use((req, res, next) => {
-//   res.header('Vary', 'Origin');
-//   next();
-// });
+// Set Vary header to Origin
+app.use((req, res, next) => {
+  res.header('Vary', 'Origin');
+  next();
+});
 
 
 // jwt secret
@@ -667,24 +680,27 @@ app.post("/api/upload-facecard-picture", authenticateToken, upload.fields([
 
 app.post('/api/participant-list', async (req, res) => {
   const { region } = req.body;
+  console.log(region);
+  
   const connection = await db.getConnection();
 
   try {
     const [alldataUsers] = await connection.query(`
       SELECT 
-        sk_participant_info.user_customerID,
-        sk_participant_info.*, 
-        sk_customer_info.*, 
-        sk_customer_credentials.*
+          sk_participant_info.user_customerID,
+          sk_participant_info.*, 
+          sk_customer_info.*,
+          sk_customer_credentials.*
       FROM sk_participant_info
       INNER JOIN sk_customer_info 
-        ON sk_participant_info.user_customerID = sk_customer_info.user_customerID COLLATE utf8mb4_unicode_ci
+          ON sk_participant_info.user_customerID = sk_customer_info.user_customerID COLLATE utf8mb4_unicode_ci
       INNER JOIN sk_customer_credentials 
-        ON sk_participant_info.user_customerID = sk_customer_credentials.user_customerID COLLATE utf8mb4_unicode_ci
-      WHERE sk_participant_info.user_region = ?
-    `, [region]);
+          ON sk_participant_info.user_customerID = sk_customer_credentials.user_customerID COLLATE utf8mb4_unicode_ci
+    `);
 
-    const cleanedUser = alldataUsers.map(({ 
+    const approvedUsers = alldataUsers.filter(users => users.user_region === region)
+
+    const cleanedUser = approvedUsers.map(({ 
       id, user_participant_referral, user_participant_profession, 
       user_profile_pic, user_cover_photo, user_gender, 
       user_birthday, user_password, user_email, user_mobileno, 
@@ -693,6 +709,8 @@ app.post('/api/participant-list', async (req, res) => {
       ...rest 
     }) => rest);
 
+    console.log(cleanedUser);
+    
     if (cleanedUser.length > 0) {
       return res.status(200).json({ success: true, users: cleanedUser });
     } else {
