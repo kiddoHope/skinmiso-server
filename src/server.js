@@ -20,7 +20,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const allowedOrigins = ['https://skinmiso.ca', 'http://localhost:3000', 'https://skinmiso.vercel.app', 'https://skinmiso-ph-beta.vercel.app', 'http://localhost:3001'];
 
-app.use(cors());
+// app.use(cors());
 
 // // Handle preflight requests
 // app.options('*', (req, res) => {
