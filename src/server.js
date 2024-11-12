@@ -704,8 +704,10 @@ app.post('/api/participant-list',async (req,res) => {
   
     const approvedUsers = alldataUsers.filter(users => users.user_region === region)
     
+    const cleanedUser = approvedUsers.map(({ id, user_participant_referral, user_participant_profession, user_profile_pic, user_cover_photo, user_gender, user_birthday, user_password, user_email, user_mobileno, user_username, user_password, user_role, user_referral, user_region, user_fb_connected, user_google_connected, user_loginSession, ...rest }) => rest);
+    
     if (approvedUsers.length > 0) {
-      return res.status(200).json({ success: true, users: approvedUsers });
+      return res.status(200).json({ success: true, users: cleanedUser });
     } else {
       return res.status(500).json({ success: false, message: "no user fetch" });
     }
