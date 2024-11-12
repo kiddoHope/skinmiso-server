@@ -18,17 +18,11 @@ const FormData = require("form-data");
 app.use(bodyParser.json());
 const upload = multer({ storage: multer.memoryStorage() });
 
-const allowedOrigins = [
-  'https://skinmiso.ca',
-  'http://localhost:3000',
-  'https://skinmiso.vercel.app',
-  'https://skinmiso-ph-beta.vercel.app',
-  'http://localhost:3001'
-];
+const allowedOrigins = ['https://skinmiso.ca', 'http://localhost:3000', 'https://skinmiso.vercel.app', 'https://skinmiso-ph-beta.vercel.app', 'http://localhost:3001'];
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl)
+    // Allow requests with no origin, like mobile apps or curl requests
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
@@ -38,12 +32,17 @@ app.use(cors({
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With', 'Accept'],
-  credentials: true,
+  credentials: true, // Allow credentials (cookies, etc.) in CORS requests
 }));
 
-// Handle preflight requests without manually setting headers
-app.options('*', cors());
-
+// Handle preflight requests
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-access-token, X-Requested-With, Accept');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(204);
+});
 
 // Set Vary header to Origin
 app.use((req, res, next) => {
