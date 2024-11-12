@@ -683,38 +683,45 @@ app.post("/api/upload-facecard-picture", authenticateToken, upload.fields([
 });
 
 
-app.post('/api/participant-list',async (req,res) => {  
-  const {region} = req.body
-
+app.post('/api/participant-list', async (req, res) => {
+  const { region } = req.body;
   const connection = await db.getConnection();
+
   try {
     const [alldataUsers] = await connection.query(`
       SELECT 
-          sk_participant_info.user_customerID,
-          sk_participant_info.*, 
-          sk_customer_info.*,
-          sk_customer_credentials.*
+        sk_participant_info.user_customerID,
+        sk_participant_info.*, 
+        sk_customer_info.*, 
+        sk_customer_credentials.*
       FROM sk_participant_info
       INNER JOIN sk_customer_info 
-          ON sk_participant_info.user_customerID = sk_customer_info.user_customerID COLLATE utf8mb4_unicode_ci
+        ON sk_participant_info.user_customerID = sk_customer_info.user_customerID COLLATE utf8mb4_unicode_ci
       INNER JOIN sk_customer_credentials 
-          ON sk_participant_info.user_customerID = sk_customer_credentials.user_customerID COLLATE utf8mb4_unicode_ci
-    `);
-  
-  
-    const approvedUsers = alldataUsers.filter(users => users.user_region === region)
-    
-    const cleanedUser = approvedUsers.map(({ id, user_participant_referral, user_participant_profession, user_profile_pic, user_cover_photo, user_gender, user_birthday, user_password, user_email, user_mobileno, user_username, user_role, user_referral, user_region, user_fb_connected, user_google_connected, user_loginSession, ...rest }) => rest);
-    
-    if (approvedUsers.length > 0) {
+        ON sk_participant_info.user_customerID = sk_customer_credentials.user_customerID COLLATE utf8mb4_unicode_ci
+      WHERE sk_participant_info.user_region = ?
+    `, [region]);
+
+    const cleanedUser = alldataUsers.map(({ 
+      id, user_participant_referral, user_participant_profession, 
+      user_profile_pic, user_cover_photo, user_gender, 
+      user_birthday, user_password, user_email, user_mobileno, 
+      user_username, user_role, user_referral, user_region, 
+      user_fb_connected, user_google_connected, user_loginSession, 
+      ...rest 
+    }) => rest);
+
+    if (cleanedUser.length > 0) {
       return res.status(200).json({ success: true, users: cleanedUser });
     } else {
-      return res.status(500).json({ success: false, message: "no user fetch" });
+      return res.status(404).json({ success: false, message: "No users found for the specified region" });
     }
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Unknown internal server error", error : error});
+    return res.status(500).json({ success: false, message: "Unknown internal server error", error: error.message });
+  } finally {
+    connection.release(); // Ensure the connection is released
   }
-})
+});
 
 
 
