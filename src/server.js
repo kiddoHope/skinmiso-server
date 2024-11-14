@@ -11,6 +11,7 @@ const rateLimit = require('express-rate-limit')
 const app = express();
 const port = 5000;
 const axios = require('axios')
+const cheerio = require('cheerio');
 const atob = require('atob');
 const multer = require("multer");
 const FormData = require("form-data");
@@ -719,6 +720,65 @@ app.post('/api/participant-list', async (req, res) => {
     connection.release(); // Ensure the connection is released
   }
 });
+
+app.post('/api/participant-gt-post', async (req, res) => {
+  const { region } = req.body;
+  const connection = await db.getConnection();
+
+  try {
+    const [alldataUsers] = await connection.query(`
+      SELECT 
+          sk_customer_credentials.user_username,
+          sk_customer_credentials.user_region,
+          sk_participant_links.*
+      FROM sk_participant_links
+      INNER JOIN sk_customer_credentials 
+          ON sk_participant_links.user_customerID = sk_customer_credentials.user_customerID COLLATE utf8mb4_unicode_ci
+    `);
+
+    const approvedUsers = alldataUsers.filter(users => users.user_region === region);
+      
+    const cleanedUser = await Promise.all(approvedUsers.map(async (user) => {
+      const { user_participant_link } = user; 
+
+      try {
+        const { data: html } = await axios.get(user_participant_link);
+        const $ = cheerio.load(html);
+        
+        
+        const title = $('title').text() || "No title found";
+        const description = $('meta[name="description"]').attr('content') || "No description found";
+        const image = $('meta[property="og:image"]').attr('content') || "No image found";
+
+        return {
+          ...user,
+          title,
+          description,
+          image
+        };
+      } catch (error) {
+        console.error(`Error fetching data for URL ${user_participant_link}:`, error.message);
+        return {
+          ...user,
+          title: "No title found",
+          description: "No description found",
+          image: "No image found"
+        };
+      }
+    }));
+    
+    if (cleanedUser.length > 0) {
+      return res.status(200).json({ success: true, users: cleanedUser });
+    } else {
+      return res.status(404).json({ success: false, message: "No users found for the specified region" });
+    }
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Unknown internal server error", error: error.message });
+  } finally {
+    connection.release(); // Ensure the connection is released
+  }
+});
+
 
 
 
