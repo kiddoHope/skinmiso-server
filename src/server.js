@@ -15,6 +15,11 @@ const cheerio = require('cheerio');
 const atob = require('atob');
 const multer = require("multer");
 const FormData = require("form-data");
+const fs = require('fs');
+const path = require('path');
+
+const postFile = path.join(__dirname, 'jsonData.json');
+
 
 app.use(bodyParser.json());
 const upload = multer({ storage: multer.memoryStorage() });
@@ -31,7 +36,7 @@ app.use(cors({
       return callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'X-Requested-With', 'Accept'],
   credentials: true, // Allow credentials (cookies, etc.) in CORS requests
 }));
@@ -39,7 +44,7 @@ app.use(cors({
 // Handle preflight requests
 app.options('*', (req, res) => {
   res.header('Access-Control-Allow-Origin', req.headers.origin);
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE', 'PATCH');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-access-token, X-Requested-With, Accept');
   res.header('Access-Control-Allow-Credentials', 'true');
   res.sendStatus(204);
@@ -125,6 +130,126 @@ testConnection();
 function generateRandomString(length = 10) {
   return crypto.randomBytes(length).toString('hex').slice(0, length);
 }
+
+app.post('/api/land-post', (req, res) => {
+  fs.readFile(postFile, 'utf8', (err, data) => {
+      if (err) {
+          console.error("Error reading the file:", err);
+          return res.status(500).json({ error: "Failed to read data" });
+      }
+      
+      try {
+          const jsonData = JSON.parse(data);
+          res.json(jsonData); // Sends the JSON data as a response
+      } catch (parseErr) {
+          console.error("Error parsing JSON data:", parseErr);
+          res.status(500).json({ error: "Invalid JSON format" });
+      }
+  });
+});
+
+app.patch('/api/update-like', (req, res) => {
+  const { postIndex, isLike } = req.body;
+
+  fs.readFile(postFile, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Error reading data:', err);
+      return res.status(500).send('Error reading data');
+    }
+
+    try {
+      const postData = JSON.parse(data);
+      // Check if postIndex is valid
+      if (!postData[postIndex] || !postData[postIndex].post) {
+        return res.status(400).send('Invalid post index');
+      }
+
+      // Update likeCount based on isLike value
+      postData[postIndex].post.likeCount += isLike ? -1 : 1;
+
+      // Write updated data back to the file
+      fs.writeFile(postFile, JSON.stringify(postData, null, 2), (writeErr) => {
+        if (writeErr) {
+          console.error('Error writing data:', writeErr);
+          return res.status(500).send('Error writing data');
+        }
+        res.send('Post updated successfully');
+      });
+    } catch (parseErr) {
+      console.error('Error parsing JSON data:', parseErr);
+      res.status(500).send('Invalid JSON format');
+    }
+  });
+});
+
+
+app.patch('/api/update-comment-like', (req, res) => {
+  const { postIndex, commentIndex, isLike } = req.body;
+  fs.readFile(postFile, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Error reading data:', err);
+      return res.status(500).send('Error reading data');
+    }
+
+    try {
+      const postData = JSON.parse(data);
+      
+      if (!postData[postIndex] || !postData[postIndex].post.comments[commentIndex]) {
+        return res.status(400).send('Invalid post index');
+      }
+      
+      // Update likeCount based on isLike value
+      postData[postIndex].post.comments[commentIndex].likeCount += isLike ? -1 : 1;
+      
+      // Write updated data back to the file
+      fs.writeFile(postFile, JSON.stringify(postData, null, 2), (writeErr) => {
+        if (writeErr) {
+          console.error('Error writing data:', writeErr);
+          return res.status(500).send('Error writing data');
+        }
+        res.send('Post updated successfully');
+      });
+    } catch (parseErr) {
+      console.error('Error parsing JSON data:', parseErr);
+      res.status(500).send('Invalid JSON format');
+    }
+  });
+});
+
+app.patch('/api/update-reply-like', (req, res) => {
+  const { postIndex, commentIndex,replyIndex, isLike } = req.body;
+  
+  fs.readFile(postFile, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Error reading data:', err);
+      return res.status(500).send('Error reading data');
+    }
+
+    try {
+      const postData = JSON.parse(data);
+      // Check if postIndex is valid
+      if (!postData[postIndex] || !postData[postIndex].post) {
+        return res.status(400).send('Invalid post index');
+      }
+
+      // Update likeCount based on isLike value
+      postData[postIndex].post.comments[commentIndex].replies[replyIndex].likeCount += isLike ? -1 : 1;
+
+
+      // Write updated data back to the file
+      fs.writeFile(postFile, JSON.stringify(postData, null, 2), (writeErr) => {
+        if (writeErr) {
+          console.error('Error writing data:', writeErr);
+          return res.status(500).send('Error writing data');
+        }
+        res.send('Post updated successfully');
+      });
+    } catch (parseErr) {
+      console.error('Error parsing JSON data:', parseErr);
+      res.status(500).send('Invalid JSON format');
+    }
+  });
+});
 
 // fetch user data
 // Protected route to fetch user data

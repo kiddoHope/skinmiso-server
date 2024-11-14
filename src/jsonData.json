@@ -1,0 +1,38 @@
+[
+  {
+    "post": {
+      "caption": "Love this product",
+      "likeCount": 21,
+      "comments": [
+        {
+          "name": "Lizy bneth",
+          "date": "November 13 2024",
+          "comment": "Yes sis, at affordable price ? Omg! Fantastic!",
+          "likeCount": 3,
+          "replies": [
+            {
+              "name": "",
+              "date": "November 13 2024",
+              "likeCount": 22,
+              "reply": "Fr??!!"
+            }
+          ]
+        },
+        {
+          "name": "Lizy bneth",
+          "date": "November 13 2024",
+          "comment": "wews!",
+          "likeCount": 2,
+          "replies": [
+            {
+              "name": "",
+              "date": "November 13 2024",
+              "likeCount": 8,
+              "reply": "??"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]
