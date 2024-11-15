@@ -251,6 +251,53 @@ app.patch('/api/update-reply-like', (req, res) => {
   });
 });
 
+app.patch('/api/add-comment', (req, res) => {
+  const { postIndex, name, date, comment, likeCount, replies } = req.body;
+
+  console.log(postIndex, name, date, comment, likeCount, replies);
+  
+  fs.readFile(postFile, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Error reading data:', err);
+      return res.status(500).send('Error reading data');
+    }
+
+    try {
+      const postData = JSON.parse(data);
+      
+      // Check if postIndex is valid
+      if (!postData[postIndex] || !postData[postIndex].post) {
+        return res.status(400).send('Invalid post index');
+      }
+
+      // Create a new comment object
+      const newComment = {
+        name: name,
+        date: date,
+        comment: comment,
+        likeCount: likeCount || 0, // Default likeCount to 0 if not provided
+        replies: replies || [] // Default replies to an empty array if not provided
+      };
+
+      // Add the new comment to the post's comments array
+      postData[postIndex].post.comments.push(newComment);
+
+      // Write the updated data back to the file
+      fs.writeFile(postFile, JSON.stringify(postData, null, 2), (writeErr) => {
+        if (writeErr) {
+          console.error('Error writing data:', writeErr);
+          return res.status(500).send('Error writing data');
+        }
+        res.send('Comment added successfully');
+      });
+    } catch (parseErr) {
+      console.error('Error parsing JSON data:', parseErr);
+      res.status(500).send('Invalid JSON format');
+    }
+  });
+});
+
+
 // fetch user data
 // Protected route to fetch user data
 app.get("/api/user-login-access-token", authenticateToken, async (req, res) => {
@@ -826,7 +873,7 @@ app.post('/api/participant-list', async (req, res) => {
     const approvedUsers = alldataUsers.filter(users => users.user_region === region)
 
     const cleanedUser = approvedUsers.map(({ 
-      id, user_participant_profession, 
+      id, 
       user_profile_pic, user_cover_photo, user_gender, 
       user_birthday, user_password, user_email, user_mobileno, 
       user_username, user_role, user_referral, user_region, 
