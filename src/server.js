@@ -700,8 +700,8 @@ app.post('/api/update-address',authenticateToken, async (req,res) => {
         return res.status(200).json({ success: true, message: 'Successfull updated the address' });
       }
     } else if (checkCustomerAddress.length === 0) {
-      const insertAddress = "INSERT INTO sk_customer_address (user_country, user_state, user_region, user_district, user_city, user_postal_code, user_street, user_houseNo, user_address_label, user_customerID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-      const [insertAddressRes] = await db.query(insertAddress, [country, state, region, district, city, postalCode, street, houseNumber, addressLabel, customerID]);
+      const insertAddress = "INSERT INTO sk_customer_address (user_country, user_state, user_area, user_region, user_district, user_city, user_postal_code, user_street, user_houseNo, user_address_label, user_customerID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      const [insertAddressRes] = await db.query(insertAddress, [country, state,area, region, district, city, postalCode, street, houseNumber, addressLabel, customerID]);
       
       if (insertAddressRes.affectedRows > 0) {
         return res.status(200).json({ success: true, message: 'Successfull Added the address' });
