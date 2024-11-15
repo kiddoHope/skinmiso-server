@@ -667,7 +667,6 @@ app.post("/api/logout", authenticateToken, async (req, res) => {
 // update Address 
 app.post('/api/update-address',authenticateToken, async (req,res) => {
   const {addressData} = req.body;
-  console.log(addressData);
   
   if (!addressData) {
     return res.status(500).json({ success: false, message: "No data received"})
@@ -692,13 +691,10 @@ app.post('/api/update-address',authenticateToken, async (req,res) => {
       [customerID]
     );
 
-    
-  console.log(checkCustomerAddress);
     if (checkCustomerAddress.length > 0) {
       const updateAddress = "UPDATE sk_customer_address SET user_country = ?, user_state = ?, user_area = ?, user_region = ?,user_district = ?, user_city = ?, user_postal_code = ?, user_street = ?, user_houseNo = ?, user_address_label = ? WHERE user_customerID = ?"
 
       const [updateRes] = await connection.query(updateAddress, [country, state, area, region, district, city, postalCode, street, houseNumber, addressLabel, customerID]);
-console.log(updateRes);
 
       if (updateRes.affectedRows > 0) {
         return res.status(200).json({ success: true, message: 'Successfull updated the address' });
@@ -706,7 +702,6 @@ console.log(updateRes);
     } else if (checkCustomerAddress.length === 0) {
       const insertAddress = "INSERT INTO sk_customer_address (user_country, user_state, user_area, user_region, user_district, user_city, user_postal_code, user_street, user_houseNo, user_address_label, user_customerID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
       const [insertAddressRes] = await db.query(insertAddress, [country, state,area, region, district, city, postalCode, street, houseNumber, addressLabel, customerID]);
-      console.log(insertAddressRes);
       
       if (insertAddressRes.affectedRows > 0) {
         return res.status(200).json({ success: true, message: 'Successfull Added the address' });
