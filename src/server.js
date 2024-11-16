@@ -934,6 +934,72 @@ app.post('/api/participant-gt-post', async (req, res) => {
   }
 });
 
+
+app.post('/api/follow-participant', authenticateToken, async (req,res) => {
+  const { participantID, customerID } = req.body;
+
+  if (!participantID && !customerID) {
+    return res.status(500).json({ success: false, message: "No ID found"})
+  }
+
+  if (participantID === customerID) {
+    return res.status(500).json({ success: false, message: "same ID found"})
+  }
+
+  try {
+    
+    const [checkParticipant] = await db.query(
+      'SELECT * FROM sk_participant_info WHERE user_customerID = ?',
+      [participantID]
+    );
+
+    if (checkParticipant.length > 0) {
+      const participantData = checkParticipant[0];
+      let participantFollowers;
+
+      // Parse sm_customer_likes into an array
+      try {
+        participantFollowers = JSON.parse(participantData.user_participant_followers || "[]");
+        
+      } catch (err) {
+        console.warn("Invalid JSON in user_participant_followers, resetting to empty array.");
+        participantFollowers = [];
+      }
+
+      // Check if the customer has already liked the review
+      const index = participantFollowers.indexOf(customerID);
+      
+      if (index > -1) {
+        // If already liked, remove the customer ID
+        participantFollowers.splice(index, 1);
+      } else {
+        // Otherwise, add the customer ID
+        participantFollowers.push(customerID);
+      }
+      
+
+      await db.query(
+        'UPDATE sk_participant_info SET user_participant_followers = ? WHERE user_customerID = ?',
+        [JSON.stringify(participantFollowers), participantID]
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Successfully followed user",
+        updatedLikes: participantFollowers,
+      });
+    } else {
+      return res.status(404).json({ success: false, message: "Review not found" });
+    }
+  } catch (error) {
+    console.error("Error processing like review:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+
+
+})
+
+
 app.post('/api/all-reviews', async (req,res) => {
   const {region} = req.body
 
@@ -969,6 +1035,7 @@ app.post('/api/all-reviews', async (req,res) => {
   }
 
 })
+
 app.post('/api/add-product-review', authenticateToken, async (req,res) => {
   const { productName, productID, customerID, review, reviewImgName } = req.body
   
@@ -994,7 +1061,6 @@ app.post('/api/add-product-review', authenticateToken, async (req,res) => {
   }
 
 })
-
 
 app.post("/api/upload-review-picture",authenticateToken, upload.single("reviewImage"), async (req, res) => {
   const reviewFile = req.file;
