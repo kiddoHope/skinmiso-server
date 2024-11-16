@@ -937,6 +937,10 @@ app.post('/api/participant-gt-post', async (req, res) => {
 app.post('/api/all-reviews', async (req,res) => {
   const {region} = req.body
 
+  if (!region) {
+    return res.status(500).json({ success:false, message: "Region field required"})
+  }
+
   const [allreviews] = await db.query(`
     SELECT 
       sk_product_reviews.sm_customerID,
@@ -973,11 +977,11 @@ app.post('/api/add-product-review', authenticateToken, async (req,res) => {
   }
 
   const reviewID = "sm_review_" + generateRandomString(20)
-
+  const likesArray = []
   try {
     
-    const inserReview = "INSERT INTO sk_product_reviews (sm_review_id, sm_product_name,sm_productID, sm_customerID, sm_review, sm_review_img ) VALUES (?, ?, ?, ?, ?)";
-    const [insertReviewRes] = await db.query(inserReview, [reviewID, productName,productID, customerID, review, reviewImgName]);
+    const inserReview = "INSERT INTO sk_product_reviews (sm_review_id, sm_product_name,sm_productID, sm_customerID, sm_review, sm_review_img, sm_customer_likes ) VALUES (?, ?, ?, ?, ?, ?)";
+    const [insertReviewRes] = await db.query(inserReview, [reviewID, productName,productID, customerID, review, reviewImgName, likesArray]);
 
     if (insertReviewRes.affectedRows > 0) {
       return res.status(200).json({ success:true, message: "Review successfully added"})
@@ -1018,6 +1022,68 @@ app.post("/api/upload-review-picture",authenticateToken, upload.single("reviewIm
     }
   } catch (error) {
     return res.status(500).json({success:false, message : "unknown Internal Server Error"})
+  }
+});
+
+app.post('/api/like-review', authenticateToken, async (req, res) => {
+  const { customerID, reviewID } = req.body;
+
+  if (!customerID) {
+    return res.status(500).json({ success: false, message: "No login found" });
+  }
+
+  try {
+    // Fetch the review from the database
+    const [reviewIDcheck] = await db.query(
+      'SELECT * FROM sk_product_reviews WHERE sm_review_id = ?',
+      [reviewID]
+    );
+
+    if (reviewIDcheck.length > 0) {
+      const reviewData = reviewIDcheck[0];
+      let customerLikes;
+
+      // Parse sm_customer_likes into an array
+      try {
+        customerLikes = JSON.parse(reviewData.sm_customer_likes || "[]");
+        console.log(customerLikes);
+        
+      } catch (err) {
+        console.warn("Invalid JSON in sm_customer_likes, resetting to empty array.");
+        customerLikes = [];
+      }
+
+      // Check if the customer has already liked the review
+      const index = customerLikes.indexOf(customerID);
+      
+      if (index > -1) {
+        // If already liked, remove the customer ID
+        customerLikes.splice(index, 1);
+      } else {
+        // Otherwise, add the customer ID
+        customerLikes.push(customerID);
+      }
+
+      // Update the database with the new likes array and like count
+      const updatedLikeCount = customerLikes.length;
+      
+
+      await db.query(
+        'UPDATE sk_product_reviews SET sm_customer_likes = ?, sm_like_counts = ? WHERE sm_review_id = ?',
+        [JSON.stringify(customerLikes), updatedLikeCount, reviewID]
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Like status updated successfully",
+        updatedLikes: customerLikes,
+      });
+    } else {
+      return res.status(404).json({ success: false, message: "Review not found" });
+    }
+  } catch (error) {
+    console.error("Error processing like review:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
