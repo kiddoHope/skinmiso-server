@@ -1516,12 +1516,12 @@ app.post('/api/ph-add-post', authenticateToken, async (req,res) => {
     if (insertReviewRes.affectedRows > 0) {
       return res.status(200).json({ success:true, message: "Story posted successfully"})
     } else {
-      return res.status(500).json({ success: true, message: "Insert Error"})
+      return res.status(500).json({ success: false, message: "Insert Error"})
     }
 
   } catch (error) {
     
-    return res.status(500).json({ success: true, message: "Internal server Error"})
+    return res.status(500).json({ success: false, message: "Internal server Error"})
   }
 })
 
