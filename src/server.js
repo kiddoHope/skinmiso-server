@@ -1053,11 +1053,12 @@ app.post('/api/add-product-review', authenticateToken, async (req,res) => {
     if (insertReviewRes.affectedRows > 0) {
       return res.status(200).json({ success:true, message: "Review successfully added"})
     } else {
-      return res.status(500).json({ success: true, message: "Internal server Error"})
+      return res.status(500).json({ success: true, message: "Insert Error"})
     }
 
   } catch (error) {
     
+    return res.status(500).json({ success: true, message: "Internal server Error"})
   }
 
 })
@@ -1467,6 +1468,58 @@ app.get('/api/all-products-banner', async (req,res) => {
     console.log(error);
   }
 })
+
+
+
+
+
+
+
+
+
+
+// ph
+
+app.get('/api/ph-all-post', async (req,res) => {
+  
+  try {
+    const [allpost] = await db.query("SELECT * FROM skph_all_postings");
+
+    if (allpost.length > 0) {
+      return res.status(200).res({ success: true, data: allpost })
+    } else {
+      return res.status(500).res({ success: false, message: 'no data fetch' })
+    }
+  } catch (error) {
+    return res.status(500).res({ success: false, message: 'Internal server error', error: error })
+  }
+})
+
+app.post('/api/ph-add-post', authenticateToken, async (req,res) => {
+  const {postID, productID, userID, image, content} = req.body
+
+   
+  if (!userID) {
+    return res.status(500).json({ success: false, message: 'invalid req, customer require'})
+  }
+
+  try {
+    
+    const inserReview = "INSERT INTO skph_all_postings (post_id, product_id, user_id, image, content ) VALUES (?, ?, ?, ?, ?)";
+    const [insertReviewRes] = await db.query(inserReview, [postID,productID, userID, image, content, ]);
+
+    if (insertReviewRes.affectedRows > 0) {
+      return res.status(200).json({ success:true, message: "Story posted successfully"})
+    } else {
+      return res.status(500).json({ success: true, message: "Insert Error"})
+    }
+
+  } catch (error) {
+    
+    return res.status(500).json({ success: true, message: "Internal server Error"})
+  }
+})
+
 
 
 app.listen(port, () => {
