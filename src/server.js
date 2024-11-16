@@ -1063,14 +1063,11 @@ app.post('/api/like-review', authenticateToken, async (req, res) => {
         // Otherwise, add the customer ID
         customerLikes.push(customerID);
       }
-
-      // Update the database with the new likes array and like count
-      const updatedLikeCount = customerLikes.length;
       
 
       await db.query(
-        'UPDATE sk_product_reviews SET sm_customer_likes = ?, sm_like_counts = ? WHERE sm_review_id = ?',
-        [JSON.stringify(customerLikes), updatedLikeCount, reviewID]
+        'UPDATE sk_product_reviews SET sm_customer_likes = ? WHERE sm_review_id = ?',
+        [JSON.stringify(customerLikes), reviewID]
       );
 
       return res.status(200).json({
