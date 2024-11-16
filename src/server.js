@@ -935,7 +935,7 @@ app.post('/api/participant-gt-post', async (req, res) => {
 });
 
 app.post('/api/add-product-review', authenticateToken, async (req,res) => {
-  const { productName,productID, customerID, review, reviewImgName } = req.body
+  const { productName, productID, customerID, review, reviewImgName } = req.body
   
   if (!customerID) {
     return res.status(500).json({ success: false, message: 'invalid req, customer require'})
