@@ -934,6 +934,37 @@ app.post('/api/participant-gt-post', async (req, res) => {
   }
 });
 
+app.post('/api/all-reviews', async (req,res) => {
+  const {region} = req.body
+
+  const [allreviews] = await db.query(`
+    SELECT 
+      sk_product_reviews.sm_customerID,
+      sk_product_reviews.*,
+      sk_customer_credentials.*,
+      sk_customer_info.*
+    FROM sk_product_reviews
+    INNER JOIN sk_customer_credentials 
+      ON sk_product_reviews.sm_customerID = sk_customer_credentials.user_customerID COLLATE utf8mb4_unicode_ci
+    INNER JOIN sk_customer_info 
+      ON sk_product_reviews.sm_customerID = sk_customer_info.user_customerID COLLATE utf8mb4_unicode_ci
+  `);
+
+  const filterUsers = allreviews.filter(users => users.user_region === region)
+
+  const cleanedUser = filterUsers.map(({ 
+    id,sm_customerID,user_customerID, user_password, user_email, user_mobileno, user_role, user_referral, user_region, 
+    user_fb_connected, user_google_connected, user_loginSession,
+    ...rest 
+  }) => rest);
+  
+  if (cleanedUser.length > 0) {
+    return res.status(200).json({ success: true , reviews: cleanedUser, message: 'All reviews fetch' })
+  } else {
+    return res.status(500).json({ success: false , message: 'Internal Server Error' })
+  }
+
+})
 app.post('/api/add-product-review', authenticateToken, async (req,res) => {
   const { productName, productID, customerID, review, reviewImgName } = req.body
   
