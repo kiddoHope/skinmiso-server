@@ -1078,7 +1078,7 @@ app.post("/api/upload-review-picture",authenticateToken, upload.single("reviewIm
   formData.append("reviewImage", reviewFile.buffer, { filename: imgName, contentType: reviewFile.mimetype });
 
   try {
-    const response = await axios.post("https://2wave.io/skinmiso/php/upload-customer-profile.php", formData, {
+    const response = await axios.post("https://2wave.io/skinmiso/php/upload-review-image.php", formData, {
       headers: {
         ...formData.getHeaders(), // Use getHeaders here for axios compatibility
       },
