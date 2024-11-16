@@ -1072,8 +1072,6 @@ app.post("/api/upload-review-picture",authenticateToken, upload.single("reviewIm
     return res.status(400).send("No file uploaded.");
   }
 
-  console.log(reviewFile);
-  
   const formData = new FormData();
   formData.append("reviewImage", reviewFile.buffer, { filename: imgName, contentType: reviewFile.mimetype });
 
