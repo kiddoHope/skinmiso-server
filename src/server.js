@@ -1485,15 +1485,14 @@ app.get('/api/ph-all-post', async (req,res) => {
   
   try {
     const [allpost] = await db.query("SELECT * FROM skph_all_postings");
-    console.log(allpost);
     
     if (allpost.length > 0) {
-      return res.status(200).res({ success: true, data: allpost })
+      return res.status(200).json({ success: true, data: allpost })
     } else {
-      return res.status(500).res({ success: false, message: 'no data fetch' })
+      return res.status(500).json({ success: false, message: 'no data fetch' })
     }
   } catch (error) {
-    return res.status(500).res({ success: false, message: 'Internal server error', error: error })
+    return res.status(500).json({ success: false, message: 'Internal server error', error: error })
   }
 })
 
