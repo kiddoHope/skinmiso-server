@@ -1485,7 +1485,8 @@ app.get('/api/ph-all-post', async (req,res) => {
   
   try {
     const [allpost] = await db.query("SELECT * FROM skph_all_postings");
-
+    console.log(allpost);
+    
     if (allpost.length > 0) {
       return res.status(200).res({ success: true, data: allpost })
     } else {
