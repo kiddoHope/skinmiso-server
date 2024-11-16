@@ -1485,9 +1485,9 @@ app.get('/api/ph-all-post', async (req,res) => {
   
   try {
     const [allpost] = await db.query("SELECT * FROM skph_all_postings");
-    
-    if (allpost.length > 0) {
-      return res.status(200).json({ success: true, data: allpost })
+    const cleanedpost = allpost.map(({ id, ...rest }) => rest);
+    if (cleanedpost.length > 0) {
+      return res.status(200).json({ success: true, data: cleanedpost })
     } else {
       return res.status(500).json({ success: false, message: 'no data fetch' })
     }
