@@ -935,7 +935,7 @@ app.post('/api/participant-gt-post', async (req, res) => {
 });
 
 app.post('/api/add-product-review', authenticateToken, async (req,res) => {
-  const { productName, customerID, review, reviewImgName } = req.body
+  const { productName,productID, customerID, review, reviewImgName } = req.body
   
   if (!customerID) {
     return res.status(500).json({ success: false, message: 'invalid req, customer require'})
@@ -945,8 +945,8 @@ app.post('/api/add-product-review', authenticateToken, async (req,res) => {
 
   try {
     
-    const inserReview = "INSERT INTO sk_product_reviews (sm_review_id, sm_product_name, sm_customerID, sm_review, sm_review_img ) VALUES (?, ?, ?, ?, ?)";
-    const [insertReviewRes] = await db.query(inserReview, [reviewID, productName, customerID, review, reviewImgName]);
+    const inserReview = "INSERT INTO sk_product_reviews (sm_review_id, sm_product_name,sm_productID, sm_customerID, sm_review, sm_review_img ) VALUES (?, ?, ?, ?, ?)";
+    const [insertReviewRes] = await db.query(inserReview, [reviewID, productName,productID, customerID, review, reviewImgName]);
 
     if (insertReviewRes.affectedRows > 0) {
       return res.status(200).json({ success:true, message: "Review successfully added"})
