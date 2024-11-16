@@ -595,9 +595,8 @@ app.post("/api/update-social-data",authenticateToken, async (req,res) => {
   const tiktok = socialLinks.tiktok
 
   try {
-    const connection = await db.getConnection();
 
-    const [checkRegisteredID] = await connection.query('SELECT * FROM sk_participant_info WHERE BINARY user_customerID = ?',[customerID]);
+    const [checkRegisteredID] = await db.query('SELECT * FROM sk_participant_info WHERE BINARY user_customerID = ?',[customerID]);
     console.log(checkRegisteredID[0]);
     
     if (checkRegisteredID.length === 0) {
@@ -608,7 +607,7 @@ app.post("/api/update-social-data",authenticateToken, async (req,res) => {
       }
     } else {
       const updateParticipant = 'UPDATE sk_participant_info SET user_participant_facebook = ?, user_participant_instagram = ?, user_participant_tiktok = ? WHERE user_customerID = ?';
-      const [updateParticipantRes] = await connection.query(updateParticipant, [facebook, instagram, tiktok, customerID]);
+      const [updateParticipantRes] = await db.query(updateParticipant, [facebook, instagram, tiktok, customerID]);
       
       if (updateParticipantRes.affectedRows > 0) {
         return res.status(200).json({ success: true, message: "Participant Socials successfully updated" });
@@ -636,7 +635,7 @@ app.post("/api/logout", authenticateToken, async (req, res) => {
 
     try {
       // Check if the user exists
-      const [userResult] = await connection.query(
+      const [userResult] = await db.query(
         'SELECT * FROM sk_customer_credentials WHERE BINARY user_username = ?',
         [username]
       );
@@ -644,7 +643,7 @@ app.post("/api/logout", authenticateToken, async (req, res) => {
       if (userResult.length === 1) {
         // Update user activity to inactive and clear login session
         const updateSql = 'UPDATE sk_customer_credentials SET user_loginSession = "", user_activity = "inactive" WHERE user_username = ?';
-        const [updateResult] = await connection.query(updateSql, [username]);
+        const [updateResult] = await db.query(updateSql, [username]);
 
         if (updateResult.affectedRows > 0) {
           return res.status(200).json({ success: true, message: 'Logout successful' });
@@ -654,8 +653,8 @@ app.post("/api/logout", authenticateToken, async (req, res) => {
       } else {
         return res.status(404).json({ success: false, message: 'User not found' });
       }
-    } finally {
-      connection.release(); // Always release the connection back to the pool
+    } catch {
+      return res.status(500).json({ success: false, message: 'Database connection failed' });
     }
 
   } catch (error) {
@@ -671,7 +670,6 @@ app.post('/api/update-address',authenticateToken, async (req,res) => {
   if (!addressData) {
     return res.status(500).json({ success: false, message: "No data received"})
   }
-  const connection = await db.getConnection(); // Get a connection from the pool
 
   try {
     const customerID = addressData.customerID
@@ -686,7 +684,7 @@ app.post('/api/update-address',authenticateToken, async (req,res) => {
     const street = addressData.street
     const area = addressData.area
 
-    const [checkCustomerAddress] = await connection.query(
+    const [checkCustomerAddress] = await db.query(
       'SELECT * FROM sk_customer_address WHERE user_customerID = ?',
       [customerID]
     );
@@ -694,7 +692,7 @@ app.post('/api/update-address',authenticateToken, async (req,res) => {
     if (checkCustomerAddress.length > 0) {
       const updateAddress = "UPDATE sk_customer_address SET user_country = ?, user_state = ?, user_area = ?, user_region = ?,user_district = ?, user_city = ?, user_postal_code = ?, user_street = ?, user_houseNo = ?, user_address_label = ? WHERE user_customerID = ?"
 
-      const [updateRes] = await connection.query(updateAddress, [country, state, area, region, district, city, postalCode, street, houseNumber, addressLabel, customerID]);
+      const [updateRes] = await db.query(updateAddress, [country, state, area, region, district, city, postalCode, street, houseNumber, addressLabel, customerID]);
 
       if (updateRes.affectedRows > 0) {
         return res.status(200).json({ success: true, message: 'Successfull updated the address' });
@@ -736,12 +734,10 @@ app.post("/api/upload-profile-picture",authenticateToken, upload.single("profile
     });
     
     if (response.data.status === 'success') {
-      
-      const connection = await db.getConnection(); // Get a connection from the pool
 
       const updateAddress = "UPDATE sk_customer_info SET user_profile_pic = ? WHERE user_customerID = ?"
 
-      const [updateRes] = await connection.query(updateAddress, [imgName, customerID]);
+      const [updateRes] = await db.query(updateAddress, [imgName, customerID]);
       
       if (updateRes.affectedRows > 0) {
         return res.status(200).json({ success: true, message: 'Successfull Updated Profile ' });
@@ -775,12 +771,10 @@ app.post("/api/upload-cover-photo",authenticateToken, upload.single("coverPhoto"
     });
     
     if (response.data.status === 'success') {
-      
-      const connection = await db.getConnection(); // Get a connection from the pool
 
       const updateAddress = "UPDATE sk_customer_info SET user_cover_photo = ? WHERE user_customerID = ?"
 
-      const [updateRes] = await connection.query(updateAddress, [imgName, customerID]);
+      const [updateRes] = await db.query(updateAddress, [imgName, customerID]);
       
       if (updateRes.affectedRows > 0) {
         return res.status(200).json({ success: true, message: 'Successfull Updated Cover Photo ' });
@@ -826,10 +820,9 @@ app.post("/api/upload-facecard-picture", authenticateToken, upload.fields([
 
     // If successful, update database
     if (response.data.status === "success") {
-      const connection = await db.getConnection();
       const updateQuery = `UPDATE sk_participant_info SET user_participant_card_img = ?, user_participant_facecard_1 = ?, user_participant_facecard_2 = ? WHERE user_customerID = ?`;
 
-      const [updateRes] = await connection.query(updateQuery, [
+      const [updateRes] = await db.query(updateQuery, [
         customerID + cardImageFile.originalname,
         customerID + faceCard1File.originalname,
         customerID + faceCard2File.originalname,
@@ -854,10 +847,8 @@ app.post("/api/upload-facecard-picture", authenticateToken, upload.fields([
 app.post('/api/participant-list', async (req, res) => {
   const { region } = req.body;
 
-  const connection = await db.getConnection();
-
   try {
-    const [alldataUsers] = await connection.query(`
+    const [alldataUsers] = await db.query(`
       SELECT 
           sk_participant_info.user_customerID,
           sk_participant_info.*, 
@@ -873,11 +864,8 @@ app.post('/api/participant-list', async (req, res) => {
     const approvedUsers = alldataUsers.filter(users => users.user_region === region)
 
     const cleanedUser = approvedUsers.map(({ 
-      id, 
-      user_profile_pic, user_cover_photo, user_gender, 
-      user_birthday, user_password, user_email, user_mobileno, 
-      user_username, user_role, user_referral, user_region, 
-      user_fb_connected, user_google_connected, user_loginSession, 
+      id, user_password, user_email, user_mobileno, user_role, user_referral, user_region, 
+      user_fb_connected, user_google_connected, user_loginSession,
       ...rest 
     }) => rest);
     
@@ -888,17 +876,14 @@ app.post('/api/participant-list', async (req, res) => {
     }
   } catch (error) {
     return res.status(500).json({ success: false, message: "Unknown internal server error", error: error.message });
-  } finally {
-    connection.release(); // Ensure the connection is released
   }
 });
 
 app.post('/api/participant-gt-post', async (req, res) => {
   const { region } = req.body;
-  const connection = await db.getConnection();
 
   try {
-    const [alldataUsers] = await connection.query(`
+    const [alldataUsers] = await db.query(`
       SELECT 
           sk_customer_credentials.user_username,
           sk_customer_credentials.user_region,
@@ -946,13 +931,64 @@ app.post('/api/participant-gt-post', async (req, res) => {
     }
   } catch (error) {
     return res.status(500).json({ success: false, message: "Unknown internal server error", error: error.message });
-  } finally {
-    connection.release(); // Ensure the connection is released
   }
 });
 
+app.post('/api/add-product-review', authenticateToken, async (req,res) => {
+  const { productName, customerID, review, reviewImgName } = req.body
+  
+  if (!customerID) {
+    return res.status(500).json({ success: false, message: 'invalid req, customer require'})
+  }
+
+  const reviewID = "sm_review_" + generateRandomString(20)
+
+  try {
+    
+    const inserReview = "INSERT INTO sk_product_reviews (sm_review_id, sm_product_name, sm_customerID, sm_review, sm_review_img ) VALUES (?, ?, ?, ?, ?)";
+    const [insertReviewRes] = await db.query(inserReview, [reviewID, productName, customerID, review, reviewImgName]);
+
+    if (insertReviewRes.affectedRows > 0) {
+      return res.status(200).json({ success:true, message: "Review successfully added"})
+    } else {
+      return res.status(500).json({ success: true, message: "Internal server Error"})
+    }
+
+  } catch (error) {
+    
+  }
+
+})
 
 
+app.post("/api/upload-review-picture",authenticateToken, upload.single("reviewImage"), async (req, res) => {
+  const reviewFile = req.file;
+  const customerID = req.body.customerID
+  const imgName = customerID + reviewFile.originalname
+  
+  if (!reviewFile) {
+    return res.status(400).send("No file uploaded.");
+  }
+
+  const formData = new FormData();
+  formData.append("reviewImage", reviewFile.buffer, { filename: imgName, contentType: reviewFile.mimetype });
+
+  try {
+    const response = await axios.post("https://2wave.io/skinmiso/php/upload-customer-profile.php", formData, {
+      headers: {
+        ...formData.getHeaders(), // Use getHeaders here for axios compatibility
+      },
+    });
+    
+    if (response.data.status === 'success') {
+      
+      return res.status(200).json({ success: true, message: 'Successfull Uploaded Review Image ' });
+     
+    }
+  } catch (error) {
+    return res.status(500).json({success:false, message : "unknown Internal Server Error"})
+  }
+});
 
 
 
@@ -996,7 +1032,7 @@ app.post('/api/verify-email', async (req, res) => {
     });
     try {
       let info = transporter.sendMail({
-        from: '"Attract Game Support" <skinmisocanada@gmail.com>', // sender address
+        from: '"Skinmiso Canada Support" <skinmisocanada@gmail.com>', // sender address
         to: to,
         subject: subject,
         html: htmlContent, // use HTML version of the email
@@ -1179,7 +1215,7 @@ app.get("/api/products", async (req, res) => {
   try {
     const [allPrdNames] = await db.query("SELECT * FROM sk_products");
     const cleanedPrdnames = allPrdNames.map(prd => {
-      const { id,sm_productID, ...rest } = prd;
+      const { id, ...rest } = prd;
       return rest;
     });
     res.json(cleanedPrdnames)
@@ -1201,28 +1237,27 @@ app.post('/api/product-info', async (req, res) => {
 
   try {
 
-    const connection = await db.getConnection(); // Get a connection from the pool
     // Fetch the specific product by name
-    const [productResults] = await connection.query('SELECT * FROM sk_products WHERE sm_product_name = ?', [productName]);
+    const [productResults] = await db.query('SELECT * FROM sk_products WHERE sm_product_name = ?', [productName]);
     if (productResults.length > 0) {
       products[productName] = productResults[0];
     }
     
 
     // Fetch associated images
-    const [imgsResults] = await connection.query('SELECT * FROM sk_product_imgs WHERE sm_product_name = ?', [productName]);
+    const [imgsResults] = await db.query('SELECT * FROM sk_product_imgs WHERE sm_product_name = ?', [productName]);
     if (imgsResults.length > 0) {
       products[productName].images = imgsResults[0];
     }
 
     // Fetch associated info
-    const [infoResults] = await connection.query('SELECT * FROM sk_product_info WHERE sm_product_name = ?', [productName]);
+    const [infoResults] = await db.query('SELECT * FROM sk_product_info WHERE sm_product_name = ?', [productName]);
     if (infoResults.length > 0) {
       products[productName].info = infoResults[0];
     }
 
     // Fetch associated shorts
-    const [shortsResults] = await connection.query('SELECT * FROM sk_product_shorts WHERE sm_product_name = ?', [productName]);
+    const [shortsResults] = await db.query('SELECT * FROM sk_product_shorts WHERE sm_product_name = ?', [productName]);
     if (shortsResults.length > 0) {
       products[productName].shorts = shortsResults[0];
     }
@@ -1236,35 +1271,36 @@ app.post('/api/product-info', async (req, res) => {
 
 app.post('/api/all-products', async (req,res) => {
   try {
-    
-    const connection = await db.getConnection()
 
-    const [productName] = await connection.query(`
+    const [productList] = await db.query(`
       SELECT 
-          sk_products.sm_product_name, 
+          sk_products.sm_productID, 
           sk_products.sm_product_category, 
           sk_product_info.*, 
           sk_product_imgs.*
       FROM sk_products
       INNER JOIN sk_product_info 
-          ON sk_products.sm_product_name = sk_product_info.sm_product_name
+          ON sk_products.sm_productID = sk_product_info.sm_productID
       INNER JOIN sk_product_imgs 
-          ON sk_products.sm_product_name = sk_product_imgs.sm_product_name;
+          ON sk_products.sm_productID = sk_product_imgs.sm_productID;
     `);
-  
-    
-    res.status(200).json(productName)
+
+    if (productList.length > 0) {
+      return res.status(200).json({ success: true, productData: productList })
+    } else {
+      return res.status(500).json({ success:false, message: "Internal Server Error"})
+    }
 
   } catch (error) {
     console.log(error);
     
   }
 })
+
+
 app.get('/api/all-products-banner', async (req,res) => {
   try {
-    const connection = await db.getConnection()
-
-    const [allPrdBanners] = await connection.query(`SELECT * FROM sk_banners_images`);
+    const [allPrdBanners] = await db.query(`SELECT * FROM sk_banners_images`);
     
     res.status(200).json(allPrdBanners)
   } catch (error) {
