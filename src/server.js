@@ -1072,6 +1072,8 @@ app.post("/api/upload-review-picture",authenticateToken, upload.single("reviewIm
     return res.status(400).send("No file uploaded.");
   }
 
+  console.log(reviewFile);
+  
   const formData = new FormData();
   formData.append("reviewImage", reviewFile.buffer, { filename: imgName, contentType: reviewFile.mimetype });
 
@@ -1080,8 +1082,10 @@ app.post("/api/upload-review-picture",authenticateToken, upload.single("reviewIm
       headers: {
         ...formData.getHeaders(), // Use getHeaders here for axios compatibility
       },
+      
     });
     
+    console.log(response);
     if (response.data.status === 'success') {
       
       return res.status(200).json({ success: true, message: 'Successfull Uploaded Review Image ' });
