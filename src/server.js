@@ -366,7 +366,6 @@ app.post("/api/user", authenticateToken, async (req, res) => {
 
 app.post('/api/customers', async (req,res) => {
   const { region } = req.body;
-
   
   if (!region) {
     return res.status(500).json({ success: false, message: "No region received"})
