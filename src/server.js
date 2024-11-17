@@ -364,6 +364,39 @@ app.post("/api/user", authenticateToken, async (req, res) => {
   }
 });
 
+app.post('/api/customers', async (req,res) => {
+  const { region } = req.body;
+
+  
+  if (!region) {
+    return res.status(500).json({ success: false, message: "No region received"})
+  }
+  
+  try {
+    const [alldataUsers] = await db.query(`
+      SELECT 
+        sk_customer_credentials.user_customerID,
+        sk_customer_credentials.*, 
+        sk_customer_info.*
+      FROM sk_customer_credentials
+      INNER JOIN sk_customer_info 
+        ON sk_customer_credentials.user_customerID = sk_customer_info.user_customerID COLLATE utf8mb4_unicode_ci
+    `); 
+  
+    if (alldataUsers.length > 0) {
+      const filterRegion = alldataUsers.filter(reg => reg.user_region === region)
+    
+      const cleanData = filterRegion.map(({ id, user_email, user_mobileno, user_username, user_password, user_role, user_referral, user_region, user_fb_connected, user_google_connected, user_activity, user_loginSession, user_cover_photo, ...rest }) => rest)
+
+      return res.status(200).json({ success: true, users: cleanData})
+    } else {
+      return res.status(500).json({ success: false, message: "no fetch data"})
+    }
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error, message: "Internal Server Error" })
+  }
+})
+
 
 // Login endpoint
 app.post("/api/login", limiter, [
