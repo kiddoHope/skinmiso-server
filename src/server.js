@@ -1654,8 +1654,6 @@ app.post('/api/ph-add-cart', authenticateToken, async (req,res) => {
   }
 })
 
-
-
 app.post('/api/ph-delete-cart', authenticateToken, async (req,res) => {
   const {postID, userID,} = req.body
    
@@ -1677,6 +1675,20 @@ app.post('/api/ph-delete-cart', authenticateToken, async (req,res) => {
   } catch (error) {
     
     return res.status(500).json({ success: false, message: "Internal server Error"})
+  }
+})
+
+app.get('/api/ph-fetch-cart', async (req,res) => {
+  try {
+    const [allpost] = await db.query("SELECT * FROM skph_user_cart");
+    const cleanedpost = allpost.map(({ id, ...rest }) => rest);
+    if (cleanedpost.length > 0) {
+      return res.status(200).json({ success: true, data: cleanedpost })
+    } else {
+      return res.status(500).json({ success: false, message: 'no data fetch' })
+    }
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Internal server error', error: error })
   }
 })
 
