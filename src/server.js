@@ -1631,7 +1631,7 @@ app.post('/api/ph-add-comment', authenticateToken, async (req,res) => {
 
 
 app.post('/api/ph-add-cart', authenticateToken, async (req,res) => {
-  const {productID, userID,} = req.body
+  const {productID, userID} = req.body
    
   if (!userID) {
     return res.status(500).json({ success: false, message: 'invalid req, customer require'})
@@ -1655,7 +1655,7 @@ app.post('/api/ph-add-cart', authenticateToken, async (req,res) => {
 })
 
 app.post('/api/ph-delete-cart', authenticateToken, async (req,res) => {
-  const {postID, userID,} = req.body
+  const {postID, userID} = req.body
    
   if (!userID) {
     return res.status(500).json({ success: false, message: 'invalid request: customer require'})
