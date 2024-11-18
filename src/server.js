@@ -1605,7 +1605,7 @@ app.get('/api/get-all-comments', async (req, res) => {
   }
 })
 
-app.post('/api/ph-post-like', authenticateToken, async (req,res) => {
+app.post('/api/ph-add-comment', authenticateToken, async (req,res) => {
   const {postID, userID, comment} = req.body
    
   if (!userID) {
