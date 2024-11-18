@@ -1566,7 +1566,7 @@ app.post('/api/ph-post-like', authenticateToken, async (req,res) => {
     const [insertReviewRes] = await db.query(inserReview, [postID,productID, userID ]);
 
     if (insertReviewRes.affectedRows > 0) {
-      return res.status(200).json({ success:true, message: "Story posted successfully"})
+      return res.status(200).json({ success:true, message: "Post successfully liked"})
     } else {
       return res.status(500).json({ success: false, message: "Insert Error"})
     }
@@ -1614,11 +1614,36 @@ app.post('/api/ph-add-comment', authenticateToken, async (req,res) => {
 
   try {
     
-    const inserReview = "INSERT INTO skph_post_comments (post_id, product_id, comment ) VALUES (?, ?, ?)";
+    const inserReview = "INSERT INTO skph_post_comments (post_id, user_id, comment ) VALUES (?, ?, ?)";
     const [insertReviewRes] = await db.query(inserReview, [postID, userID, comment ]);
 
     if (insertReviewRes.affectedRows > 0) {
-      return res.status(200).json({ success:true, message: "Story posted successfully"})
+      return res.status(200).json({ success:true, message: "Comment successfully added"})
+    } else { 
+      return res.status(500).json({ success: false, message: "Insert Error"})
+    }
+
+  } catch (error) {
+    
+    return res.status(500).json({ success: false, message: "Internal server Error"})
+  }
+})
+
+
+app.post('/api/ph-add-cart', authenticateToken, async (req,res) => {
+  const {productID, userID,} = req.body
+   
+  if (!userID) {
+    return res.status(500).json({ success: false, message: 'invalid req, customer require'})
+  }
+
+  try {
+    
+    const inserReview = "INSERT INTO skph_user_cart (product_id, user_id ) VALUES (?, ?)";
+    const [insertReviewRes] = await db.query(inserReview, [productID, userID ]);
+
+    if (insertReviewRes.affectedRows > 0) {
+      return res.status(200).json({ success:true, message: "Cart successfully added"})
     } else {
       return res.status(500).json({ success: false, message: "Insert Error"})
     }
@@ -1629,6 +1654,31 @@ app.post('/api/ph-add-comment', authenticateToken, async (req,res) => {
   }
 })
 
+
+
+app.post('/api/ph-delete-cart', authenticateToken, async (req,res) => {
+  const {postID, userID,} = req.body
+   
+  if (!userID) {
+    return res.status(500).json({ success: false, message: 'invalid request: customer require'})
+  }
+
+  try {
+    
+    const inserReview = "DELETE FROM skph_user_cart WHERE product_id = ? AND user_id = ? ";
+    const [insertReviewRes] = await db.query(inserReview, [postID, userID]);
+
+    if (insertReviewRes.affectedRows > 0) {
+      return res.status(200).json({ success:true, message: "Cart successfully deleted"})
+    } else {
+      return res.status(500).json({ success: false, message: "Insert Error"})
+    }
+
+  } catch (error) {
+    
+    return res.status(500).json({ success: false, message: "Internal server Error"})
+  }
+})
 
 
 app.listen(port, () => {
