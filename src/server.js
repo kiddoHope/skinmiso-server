@@ -1553,6 +1553,82 @@ app.post('/api/ph-add-post', authenticateToken, async (req,res) => {
   }
 })
 
+app.post('/api/ph-post-like', authenticateToken, async (req,res) => {
+  const {postID, productID, userID} = req.body
+   
+  if (!userID) {
+    return res.status(500).json({ success: false, message: 'invalid req, customer require'})
+  }
+
+  try {
+    
+    const inserReview = "INSERT INTO skph_post_likes (post_id, product_id, user_id ) VALUES (?, ?, ?)";
+    const [insertReviewRes] = await db.query(inserReview, [postID,productID, userID ]);
+
+    if (insertReviewRes.affectedRows > 0) {
+      return res.status(200).json({ success:true, message: "Story posted successfully"})
+    } else {
+      return res.status(500).json({ success: false, message: "Insert Error"})
+    }
+
+  } catch (error) {
+    
+    return res.status(500).json({ success: false, message: "Internal server Error"})
+  }
+})
+
+app.get('/api/get-all-likes', async (req, res) => {
+  try {
+    const [allpost] = await db.query("SELECT * FROM skph_post_likes");
+    const cleanedpost = allpost.map(({ id, ...rest }) => rest);
+    if (cleanedpost.length > 0) {
+      return res.status(200).json({ success: true, data: cleanedpost })
+    } else {
+      return res.status(500).json({ success: false, message: 'no data fetch' })
+    }
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Internal server error', error: error })
+  }
+})
+
+app.get('/api/get-all-comments', async (req, res) => {
+  try {
+    const [allpost] = await db.query("SELECT * FROM skph_post_comments");
+    const cleanedpost = allpost.map(({ id, ...rest }) => rest);
+    if (cleanedpost.length > 0) {
+      return res.status(200).json({ success: true, data: cleanedpost })
+    } else {
+      return res.status(500).json({ success: false, message: 'no data fetch' })
+    }
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Internal server error', error: error })
+  }
+})
+
+app.post('/api/ph-post-like', authenticateToken, async (req,res) => {
+  const {postID, userID, comment} = req.body
+   
+  if (!userID) {
+    return res.status(500).json({ success: false, message: 'invalid req, customer require'})
+  }
+
+  try {
+    
+    const inserReview = "INSERT INTO skph_post_comments (post_id, product_id, comment ) VALUES (?, ?, ?)";
+    const [insertReviewRes] = await db.query(inserReview, [postID, userID, comment ]);
+
+    if (insertReviewRes.affectedRows > 0) {
+      return res.status(200).json({ success:true, message: "Story posted successfully"})
+    } else {
+      return res.status(500).json({ success: false, message: "Insert Error"})
+    }
+
+  } catch (error) {
+    
+    return res.status(500).json({ success: false, message: "Internal server Error"})
+  }
+})
+
 
 
 app.listen(port, () => {
