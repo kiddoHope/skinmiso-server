@@ -14,9 +14,17 @@ const axios = require('axios')
 const cheerio = require('cheerio');
 const atob = require('atob');
 const multer = require("multer");
+const nodemailer = require('nodemailer');
 const FormData = require("form-data");
 const fs = require('fs');
 const path = require('path');
+const Confirmation = require('./confirm')
+const Confirmationph = require('./confirm-ph')
+const Forgotpass = require('./forgotPass')
+const Forgotpassph = require('./forgotPass-ph')
+
+const React = require('react');
+const { renderToStaticMarkup } = require('react-dom/server');
 
 const postFile = path.join(__dirname, 'jsonData.json');
 
@@ -56,9 +64,6 @@ app.use((req, res, next) => {
   next();
 });
 
-
-// jwt secret
-// const jwtSecret = process.env.REACT_APP_JWT_SECRET;
 // jwt secret
 const jwtSecret = process.env.REACT_APP_JWT_SECRET
 // const googleClientID = process.env.REACT_GOOGLE_CLIENT_ID
@@ -83,49 +88,198 @@ const limiter = rateLimit({
   message: "Too many requests from this IP, please try again later."
 });
 
-// user data backend
 // Middleware to authenticate JWT token
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1]; // Get token from Authorization header
+  const token = authHeader && authHeader.split(" ")[1];
+  
 
   if (!token) {
-    return res.status(401).json({ message: "Authentication token is required" });
+      return res.status(401).json({ success: false, message: "Authentication token is required" });
   }
 
   jwt.verify(token, jwtSecret, (err, decoded) => {
-    if (err) {
-      return res.status(403).json({ message: "Invalid token" });
-    }
-    req.user = decoded;
-    next();
+      if (err) {
+          if (err.name === "TokenExpiredError") {
+
+              return res.status(401).json({ success: false, message: "Token has expired" });
+          }
+          if (err.name === "JsonWebTokenError") {
+  
+              return res.status(403).json({ success: false, message: "Invalid token" });
+          }
+   
+          return res.status(403).json({ success: false, message: "Token verification failed" });
+      }
+      req.user = decoded; 
+      next(); 
   });
 };
 
+// 46.202.129.137
+// 2a02:4780:28:feaa::1
 
 const db = mysql.createPool({
-  host: 'srv1076.hstgr.io',       // Your MySQL server host
-  user: 'u781068912_testDatabase',            // Your MySQL username
-  password: '2*yKfs:1a',            // Your MySQL password
-  database: 'u781068912_skinmiso',    // Your database name
+  host: process.env.REACT_DB_HOST,   
+  user: process.env.REACT_DB_USER,  
+  password: process.env.REACT_DB_PASS,    
+  database: process.env.REACT_DB_DATABASE,  
   waitForConnections: true,
-  connectTimeout: 20000, // Increase to 20 seconds
-  port: 3306,                // Default MySQL port
-  connectionLimit: 10,     // Maximum number of connections in the pool
-  queueLimit: 0            // Unlimited queueing for connections
+  connectTimeout: 20000, 
+  port: 3306,            
+  connectionLimit: 10,     
+  queueLimit: 0       
 });
 
 async function testConnection() {
   try {
     const connection = await db.getConnection();
     console.log('Database connection successful!');
-    connection.release(); // Release the connection back to the pool
+    connection.release();
   } catch (error) {
     console.error('Database connection failed:', error.message);
   }
 }
 
 testConnection();
+
+
+const trafficSummary = [];
+
+app.use((req, res, next) => {
+  const rawIp =
+    req.headers["x-forwarded-for"]?.split(",").shift().trim() ||
+    req.socket?.remoteAddress ||
+    req.connection?.remoteAddress;
+
+  const ip = rawIp === "::1" ? "127.0.0.1" : rawIp;
+
+  // Find existing entry for the IP
+  let entry = trafficSummary.find((item) => item.ip === ip);
+
+  if (!entry) {
+    entry = { ip, totalRequests: 0, details: [] };
+    trafficSummary.push(entry);
+  }
+
+  entry.totalRequests += 1;
+
+  const urlMethodKey = `${req.method} ${req.originalUrl}`;
+  let detailEntry = entry.details.find((detail) => detail.url === req.originalUrl && detail.method === req.method);
+
+  if (!detailEntry) {
+    detailEntry = { url: req.originalUrl, method: req.method, requestCount: 0 };
+    entry.details.push(detailEntry);
+  }
+
+  detailEntry.requestCount += 1;
+
+  next();
+});
+
+setInterval(() => {
+  trafficSummary.length = 0; // Clear the array
+}, 60 * 60 * 1000); // 60 minutes * 60 seconds * 1000 milliseconds
+
+
+// API Endpoint to Retrieve Traffic Data
+app.get("/api/admin/web-traffic",authenticateToken, async (req, res) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  try {
+    const userID = jwtDecode(token)
+    const [checkRole] = await db.query("SELECT * FROM sk_customer_credentials WHERE user_customerID = ?",[userID.customerID]);
+
+    if (checkRole.length > 0) {
+      const userData = checkRole[0]
+      if (userData.user_role > 'admin') {
+        return res.status(200).json({ success: true, message: "Traffic data retrieved", data: trafficSummary})
+      } else {
+        return res.status(401).json({ success: false, message: "User not authorized"})
+      }
+    } else {
+      return res.status(404).json({ success:false, message: "No user found" })
+    }
+  } catch (error) {
+    return res.status(400).json({ success: false, message: "Request Error", error: error })
+  }
+});
+
+app.post('/api/admin/customer-list', authenticateToken, async (req,res) => {
+  const {region} = req.body;
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  try {
+    const userID = jwtDecode(token)
+    const [checkRole] = await db.query("SELECT * FROM sk_customer_credentials WHERE user_customerID = ?",[userID.customerID]);
+    
+    if (checkRole.length > 0) {
+      const userData = checkRole[0]
+      if (userData.user_role > 'admin') {
+        const [usersData] = await db.query("SELECT * FROM sk_customer_credentials WHERE user_region = ?", [region])
+        
+        if (usersData.length > 0) {
+          const cleanedData = usersData.map(({ id, user_customerID, user_password, user_referral, user_fb_connected, user_google_connected, user_loginSession, ...cleaned}) => cleaned)
+          return res.status(200).json({ success: true, message: "users data retrieved", users: cleanedData})
+        } else {
+          return res.status(404).json({ success:false, message: "No user found" })
+        }
+      } else {
+        return res.status(401).json({ success: false, message: "User not authorized"})
+      }
+    } else {
+      return res.status(404).json({ success:false, message: "No user found" })
+    }
+  } catch (error) {
+    return res.status(400).json({ success: false, message: "Request Error", error: error })
+  }
+})
+
+app.post('/api/admin/participants-list', authenticateToken, async (req,res) => {
+  const {region} = req.body;
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  try {
+    const userID = jwtDecode(token)
+    const [checkRole] = await db.query("SELECT * FROM sk_customer_credentials WHERE user_customerID = ?",[userID.customerID]);
+    
+    if (checkRole.length > 0) {
+      const userData = checkRole[0]
+      if (userData.user_role > 'admin') {
+        const [participants] = await db.query(`
+          SELECT 
+            sk_customer_credentials.user_customerID,
+            sk_customer_credentials.*,
+            sk_participant_info.*
+          FROM sk_customer_credentials
+          INNER JOIN sk_participant_info 
+            ON sk_customer_credentials.user_customerID = sk_participant_info.user_customerID COLLATE utf8mb4_unicode_ci
+        `); 
+        
+        if (participants.length > 0) {
+          const cleanedData = participants.map(({ id, user_register_time, user_mobileno, user_role, user_email, user_password, user_referral, user_fb_connected, user_google_connected, user_loginSession, user_region, user_participant_referral, user_participant_talent, user_participant_profession, user_participant_description, user_participant_facebook, user_participant_instagram, user_participant_tiktok, user_participant_card_img, user_participant_facecard_1, user_participant_facecard_2, user_participant_followers, user_participant_likes, ...cleaned}) => cleaned)
+          return res.status(200).json({ success: true, message: "users data retrieved", users: cleanedData})
+        } else {
+          return res.status(404).json({ success:false, message: "No user found" })
+        }
+      } else {
+        return res.status(401).json({ success: false, message: "User not authorized"})
+      }
+    } else {
+      return res.status(404).json({ success:false, message: "No user found" })
+    }
+  } catch (error) {
+    return res.status(400).json({ success: false, message: "Request Error", error: error })
+  }
+})
+
+
+
+
+
 
 function generateRandomString(length = 10) {
   return crypto.randomBytes(length).toString('hex').slice(0, length);
@@ -296,7 +450,6 @@ app.patch('/api/add-comment', (req, res) => {
     }
   });
 });
-
 
 // fetch user data
 // Protected route to fetch user data
@@ -1200,7 +1353,6 @@ const forgotPassCode = (length) => {
 // verify user
 app.post('/api/verify-email', async (req, res) => {
   const { to } = req.body;
-  
   if (to.length > 0) {
     
     const codePass = forgotPassCode(6)
@@ -1210,7 +1362,7 @@ app.post('/api/verify-email', async (req, res) => {
     );
 
     
-    const jwtCode = jwt.sign({ codePass }, jwtSecret, { expiresIn: "7d" });
+    const jwtCode = jwt.sign({ codePass }, jwtSecret, { expiresIn: "1d" });
 
     let transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
@@ -1224,6 +1376,7 @@ app.post('/api/verify-email', async (req, res) => {
         ciphers: 'SSLv3',
       }
     });
+    
     try {
       let info = transporter.sendMail({
         from: '"Skinmiso Canada Support" <skinmisocanada@gmail.com>', // sender address
@@ -1232,7 +1385,7 @@ app.post('/api/verify-email', async (req, res) => {
         html: htmlContent, // use HTML version of the email
       });
       
-      res.status(200).json({ message: 'Email sent successfully', jtdcd: jwtCode});
+      res.status(200).json({ success: true, message: 'Email sent successfully! Please check your inbox. If you dont see it, wait a minute and check again', jtdcd: jwtCode});
     } catch (error) {
       console.error('Error sending email:', error);
       res.status(500).send('Error sending email');
@@ -1505,13 +1658,133 @@ app.get('/api/all-products-banner', async (req,res) => {
 
 
 
+app.post('/api/payment',async (req,res) => {
+  const { amount } = req.body;
+
+  try {
+    const response = await axios.post(
+      'https://pg-sandbox.paymaya.com/payments/v1/payment-tokens',
+      {
+        totalAmount: {
+          value: amount,
+          currency: 'PHP',
+        },
+        redirectUrl: {
+          success: 'http://localhost:3000/success',
+          failure: 'http://localhost:3000/failure',
+        },
+      },
+      {
+        headers: {
+          Authorization: 'Basic YOUR_API_KEY',
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    res.json({ redirectUrl: response.data.redirectUrl });
+  } catch (error) {
+    console.error(error.response.data);
+    res.status(500).json({ error: 'Payment failed' });
+  }
+})
 
 
 
-
-
+// dkow mhxn cvte gdlp app pass
 
 // ph
+
+
+app.post('/api/ph-verify-email', async (req, res) => {
+  const { to } = req.body;
+  if (to.length > 0) {
+    
+    const codePass = forgotPassCode(6)
+    const subject = "Verify Email";
+    const htmlContent = renderToStaticMarkup(
+      React.createElement(Confirmationph, { codePass })
+    );
+
+    
+    const jwtCode = jwt.sign({ codePass }, jwtSecret, { expiresIn: "1d" });
+
+    let transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // true for 465, false for other ports
+      auth: {
+        user: 'admin@skinmiso.ph',
+        pass: 'dkow mhxn cvte gdlp',
+      },
+      tls: {
+        ciphers: 'SSLv3',
+      }
+    });
+    
+    try {
+      let info = transporter.sendMail({
+        from: '"Skinmiso Philippines Admin Support" <admin@skinmiso.ph>', // sender address
+        to: to,
+        subject: subject,
+        html: htmlContent, // use HTML version of the email
+      });
+      
+      res.status(200).json({ success: true, message: 'Email sent successfully! Please check your inbox. If you dont see it, wait a minute and check again', jtdcd: jwtCode});
+    } catch (error) {
+      console.error('Error sending email:', error);
+      res.status(500).send('Error sending email');
+    }
+  } else {
+    res.json({ message: 'Email not found'});
+  }
+});
+
+app.post('/api/ph-forgot-password', async (req, res) => {
+  const { to } = req.body;
+  if (to.length > 0) {
+    
+    const codePass = forgotPassCode(6)
+    const subject = "Verify Email";
+    const htmlContent = renderToStaticMarkup(
+      React.createElement(Forgotpassph, { codePass })
+    );
+
+    
+    const jwtCode = jwt.sign({ codePass }, jwtSecret, { expiresIn: "1d" });
+
+    let transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false, // true for 465, false for other ports
+      auth: {
+        user: 'admin@skinmiso.ph',
+        pass: 'dkow mhxn cvte gdlp',
+      },
+      tls: {
+        ciphers: 'SSLv3',
+      }
+    });
+    
+    try {
+      let info = transporter.sendMail({
+        from: '"Skinmiso Philippines Admin Support" <admin@skinmiso.ph>', // sender address
+        to: to,
+        subject: subject,
+        html: htmlContent, // use HTML version of the email
+      });
+      
+      res.status(200).json({ success: true, message: 'Email sent successfully! Please check your inbox. If you dont see it, wait a minute and check again', jtdcd: jwtCode});
+    } catch (error) {
+      console.error('Error sending email:', error);
+      res.status(500).send('Error sending email');
+    }
+  } else {
+    res.json({ message: 'Email not found'});
+  }
+});
+
+
 
 app.get('/api/ph-all-post', async (req,res) => {
   
