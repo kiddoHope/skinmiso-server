@@ -1757,7 +1757,7 @@ app.post('/api/ph-forgot-password', async (req, res) => {
       
       const userData = {
         codePass: codePass,
-        custmerID: userData.user_customerID
+        customerID: userData.user_customerID
       }
       const jwtCode = jwt.sign({ codePass }, jwtSecret, { expiresIn: "1d" });
   
