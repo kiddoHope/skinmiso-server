@@ -1742,45 +1742,57 @@ app.post('/api/ph-verify-email', async (req, res) => {
 
 app.post('/api/ph-forgot-password', async (req, res) => {
   const { to } = req.body;
-  if (to.length > 0) {
+  if (!to) {
     
-    const codePass = forgotPassCode(6)
-    const subject = "Verify Email";
-    const htmlContent = renderToStaticMarkup(
-      React.createElement(Forgotpassph, { codePass })
-    );
+  }
+  try {
 
-    
-    const jwtCode = jwt.sign({ codePass }, jwtSecret, { expiresIn: "1d" });
-
-    let transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: 'admin@skinmiso.ph',
-        pass: 'dkow mhxn cvte gdlp',
-      },
-      tls: {
-        ciphers: 'SSLv3',
+    const [userData] = await db.query("SELECT * FROM sk_customer_credentials WHERE user_email = ?", [to]);
+    if (userData.length > 0 ) {
+      const codePass = forgotPassCode(6)
+      const subject = "Verify Email";
+      const htmlContent = renderToStaticMarkup(
+        React.createElement(Forgotpassph, { codePass })
+      );
+      
+      const userData = {
+        codePass: codePass,
+        custmerID: userData.user_customerID
       }
-    });
-    
-    try {
-      let info = transporter.sendMail({
-        from: '"Skinmiso Philippines Admin Support" <admin@skinmiso.ph>', // sender address
-        to: to,
-        subject: subject,
-        html: htmlContent, // use HTML version of the email
+      const jwtCode = jwt.sign({ codePass }, jwtSecret, { expiresIn: "1d" });
+  
+      let transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false, // true for 465, false for other ports
+        auth: {
+          user: 'admin@skinmiso.ph',
+          pass: 'dkow mhxn cvte gdlp',
+        },
+        tls: {
+          ciphers: 'SSLv3',
+        }
       });
       
-      res.status(200).json({ success: true, message: 'Email sent successfully! Please check your inbox. If you dont see it, wait a minute and check again', jtdcd: jwtCode});
-    } catch (error) {
-      console.error('Error sending email:', error);
-      res.status(500).send('Error sending email');
+      try {
+        let info = transporter.sendMail({
+          from: '"Skinmiso Philippines Admin Support" <admin@skinmiso.ph>', // sender address
+          to: to,
+          subject: subject,
+          html: htmlContent, // use HTML version of the email
+        });
+        
+        res.status(200).json({ success: true, message: 'Email sent successfully! Please check your inbox. If you dont see it, wait a minute and check again', jtdcd: jwtCode});
+      } catch (error) {
+        console.error('Error sending email:', error);
+        res.status(500).send('Error sending email');
+      }
+    } else {
+      return res.status(404).json({ success:false, message: "No user found on the given Email" })
     }
-  } else {
-    res.json({ message: 'Email not found'});
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Unknown internal server error", error: error.message });
+    
   }
 });
 
