@@ -1784,7 +1784,37 @@ app.post('/api/ph-forgot-password', async (req, res) => {
   }
 });
 
+app.post('/api/set-new-password', async (req, res) => {
+  const { user } = req.body;
+  
+  if (!user) {
+    return res.status(500).json({ success: false, message: 'invalid request, user data require'})
+  }
+  
+  try {
+    const [userData] = await db.query("SELECT * FROM sk_customer_credentials WHERE user_customerID = ?", [user.customerID]);
+    
+    if (userData.length > 0) {
+      const customerID = user.customerID
+      const generatedSession = generateRandomString(10);
+      const loginSession = 'sknms' + generatedSession + 'log';
+      const hash_pass = await bcrypt.hash(user.newpassword, 10);
 
+      const [updatePass] = await db.query("UPDATE sk_customer_credentials SET user_password = ?, user_loginSession = ?, user_activity = 'active' WHERE BINARY user_customerID = ?",[hash_pass,loginSession,user.customerID]);
+      
+      if (updatePass.affectedRows > 0) {
+        const authToken = jwt.sign({ customerID }, jwtSecret, { expiresIn: "7d" });
+        return res.status(200).json({ success: true, message: 'Password successfully changed', loginSession, token: authToken });
+      } else {
+        return res.status(404).json({ success:false, message: "No user found" })
+      }
+    }
+    
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Unknown internal server error", error: error.message });
+  }
+
+});
 
 app.get('/api/ph-all-post', async (req,res) => {
   

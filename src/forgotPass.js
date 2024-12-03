@@ -86,7 +86,7 @@ const Confirmation = ({codePass }) => {
         })
       ),
       React.createElement('h2', { style: styles.emailTitle }, "Password Reset Request"),
-      React.createElement('h2', { style: styles.from }, "from SKINMISO Philippines"),
+      React.createElement('h2', { style: styles.from }, "from SKINMISO Canada"),
       React.createElement('p', { style: styles.text }, "We received a request to reset the password for your account. Use the 6-digit verification code below to reset your password:"),
       React.createElement('div', { style: styles.codeDiv },
         React.createElement('p', { style: styles.recoverytxt }, "Your Reset Code"),
@@ -94,10 +94,10 @@ const Confirmation = ({codePass }) => {
       ),
       React.createElement('p', { style: styles.emailExpirationNote }, "This code will expire in 1 day."),
       React.createElement('p', { style: styles.text }, "If you did not request a password reset, please ignore this email or contact support if you have concerns."),
-      React.createElement('p', { style: styles.text }, "Thank you for using SKINMISO Philippines!"),
+      React.createElement('p', { style: styles.text }, "Thank you for using SKINMISO Canada!"),
       React.createElement('p', { style: styles.text }, "Best Regards,",
         React.createElement('br'),
-        "The SKINMISO Philippines Team"
+        "The SKINMISO Canada Team"
       )
     )
   );
