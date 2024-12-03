@@ -1707,7 +1707,6 @@ app.post('/api/ph-verify-email', async (req, res) => {
     );
 
     
-    const jwtCode = jwt.sign({ codePass }, jwtSecret, { expiresIn: "1d" });
 
     let transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
@@ -1730,6 +1729,7 @@ app.post('/api/ph-verify-email', async (req, res) => {
         html: htmlContent, // use HTML version of the email
       });
       
+      const jwtCode = jwt.sign({ codePass }, jwtSecret, { expiresIn: "1d" });
       res.status(200).json({ success: true, message: 'Email sent successfully! Please check your inbox. If you dont see it, wait a minute and check again', jtdcd: jwtCode});
     } catch (error) {
       console.error('Error sending email:', error);
@@ -1743,11 +1743,12 @@ app.post('/api/ph-verify-email', async (req, res) => {
 app.post('/api/ph-forgot-password', async (req, res) => {
   const { to } = req.body;
   if (!to) {
-    
+    return res.status(500).json({ success: false, message: 'invalid request, user data require'})
   }
   try {
 
     const [userData] = await db.query("SELECT * FROM sk_customer_credentials WHERE user_email = ?", [to]);
+    
     if (userData.length > 0 ) {
       const codePass = forgotPassCode(6)
       const subject = "Verify Email";
@@ -1784,7 +1785,6 @@ app.post('/api/ph-forgot-password', async (req, res) => {
         
         res.status(200).json({ success: true, message: 'Email sent successfully! Please check your inbox. If you dont see it, wait a minute and check again', jtdcd: jwtCode});
       } catch (error) {
-        console.error('Error sending email:', error);
         res.status(500).send('Error sending email');
       }
     } else {
@@ -1792,7 +1792,6 @@ app.post('/api/ph-forgot-password', async (req, res) => {
     }
   } catch (error) {
     return res.status(500).json({ success: false, message: "Unknown internal server error", error: error.message });
-    
   }
 });
 
