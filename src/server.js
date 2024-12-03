@@ -1748,8 +1748,8 @@ app.post('/api/ph-forgot-password', async (req, res) => {
   try {
 
     const [userData] = await db.query("SELECT * FROM sk_customer_credentials WHERE user_email = ?", [to]);
-    
     if (userData.length > 0 ) {
+      
       const codePass = forgotPassCode(6)
       const subject = "Verify Email";
       const htmlContent = renderToStaticMarkup(
@@ -1758,7 +1758,7 @@ app.post('/api/ph-forgot-password', async (req, res) => {
       
       const customerData = {
         codePass: codePass,
-        customerID: userData.user_customerID
+        customerID: userData[0].user_customerID
       }
       const jwtCode = jwt.sign({ customerData }, jwtSecret, { expiresIn: "1d" });
   
