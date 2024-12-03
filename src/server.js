@@ -1755,11 +1755,11 @@ app.post('/api/ph-forgot-password', async (req, res) => {
         React.createElement(Forgotpassph, { codePass })
       );
       
-      const userData = {
+      const customerData = {
         codePass: codePass,
         customerID: userData.user_customerID
       }
-      const jwtCode = jwt.sign({ codePass }, jwtSecret, { expiresIn: "1d" });
+      const jwtCode = jwt.sign({ customerData }, jwtSecret, { expiresIn: "1d" });
   
       let transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
