@@ -766,7 +766,6 @@ app.post("/api/update-user-data",authenticateToken, async (req,res) => {
 
 })
 
-
 app.post("/api/update-social-data",authenticateToken, async (req,res) => {
   const {socialLinks} = req.body
   
@@ -1119,7 +1118,6 @@ app.post('/api/participant-gt-post', async (req, res) => {
   }
 });
 
-
 app.post('/api/follow-participant', authenticateToken, async (req,res) => {
   const { participantID, customerID } = req.body;
 
@@ -1183,7 +1181,6 @@ app.post('/api/follow-participant', authenticateToken, async (req,res) => {
 
 
 })
-
 
 app.post('/api/all-reviews', async (req,res) => {
   const {region} = req.body
@@ -1339,7 +1336,6 @@ app.post('/api/like-review', authenticateToken, async (req, res) => {
 
 
 
-
 const forgotPassCode = (length) => {
   const charset = "1234567890";
   let result = "";
@@ -1392,6 +1388,46 @@ app.post('/api/verify-email', async (req, res) => {
     }
   } else {
     res.json({ message: 'Email not found'});
+  }
+});
+
+app.post('/api/search-email', async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ success: false, message: "Invalid request, no data received" });
+  }
+
+  try {
+    const [searchUser] = await db.query(
+      `
+      SELECT 
+        sk_customer_credentials.user_customerID,
+        sk_customer_credentials.user_email,
+        sk_customer_info.*
+      FROM 
+        sk_customer_credentials 
+      INNER JOIN 
+        sk_customer_info 
+      ON 
+        sk_customer_credentials.user_customerID COLLATE utf8mb4_unicode_ci = sk_customer_info.user_customerID COLLATE utf8mb4_unicode_ci
+      WHERE 
+        sk_customer_credentials.user_email = ?;
+      `,
+      [email]
+    );
+
+    if (searchUser.length > 0) {
+      const user = searchUser;
+      const cleanUser = user.map(({ id, user_cover_photo,user_gender,user_birthday, ...clean }) => clean)
+      return res.status(200).json({ success: true, message:`Here was the user(s) connected to email ${email}`, data: cleanUser });
+    } else {
+      console.log("User not found for email: ", email);
+      return res.status(404).json({ success: false, message: "no account connected into that email" });
+    }
+  } catch (error) {
+    console.error("Error executing query: ", error.sqlMessage || error.message);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
@@ -1644,7 +1680,6 @@ app.post('/api/all-products', async (req,res) => {
   }
 })
 
-
 app.get('/api/all-products-banner', async (req,res) => {
   try {
     const [allPrdBanners] = await db.query(`SELECT * FROM sk_banners_images`);
@@ -1654,9 +1689,6 @@ app.get('/api/all-products-banner', async (req,res) => {
     console.log(error);
   }
 })
-
-
-
 
 app.post('/api/payment',async (req,res) => {
   const { amount } = req.body;
@@ -1689,12 +1721,8 @@ app.post('/api/payment',async (req,res) => {
   }
 })
 
-
-
 // dkow mhxn cvte gdlp app pass
-
 // ph
-
 
 app.post('/api/ph-verify-email', async (req, res) => {
   const { to } = req.body;
@@ -1943,7 +1971,6 @@ app.post('/api/ph-add-comment', authenticateToken, async (req,res) => {
   }
 })
 
-
 app.post('/api/ph-add-cart', authenticateToken, async (req,res) => {
   const {productID, userID} = req.body
    
@@ -2005,7 +2032,6 @@ app.get('/api/ph-fetch-cart', async (req,res) => {
     return res.status(500).json({ success: false, message: 'Internal server error', error: error })
   }
 })
-
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
