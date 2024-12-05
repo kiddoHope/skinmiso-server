@@ -193,7 +193,7 @@ app.get("/api/admin/web-traffic",authenticateToken, async (req, res) => {
 
     if (checkRole.length > 0) {
       const userData = checkRole[0]
-      if (userData.user_role > 'admin') {
+      if (userData.user_role === 'admin') {
         return res.status(200).json({ success: true, message: "Traffic data retrieved", data: trafficSummary})
       } else {
         return res.status(401).json({ success: false, message: "User not authorized"})
@@ -217,7 +217,7 @@ app.post('/api/admin/customer-list', authenticateToken, async (req,res) => {
     
     if (checkRole.length > 0) {
       const userData = checkRole[0]
-      if (userData.user_role > 'admin') {
+      if (userData.user_role === 'admin') {
         const [usersData] = await db.query("SELECT * FROM sk_customer_credentials WHERE user_region = ?", [region])
         
         if (usersData.length > 0) {
@@ -248,7 +248,7 @@ app.post('/api/admin/participants-list', authenticateToken, async (req,res) => {
     
     if (checkRole.length > 0) {
       const userData = checkRole[0]
-      if (userData.user_role > 'admin') {
+      if (userData.user_role === 'admin') {
         const [participants] = await db.query(`
           SELECT 
             sk_customer_credentials.user_customerID,
