@@ -1099,6 +1099,7 @@ app.post('/api/participant-approve',async (req, res) => {
 
 app.post('/api/deactivate-participant',async (req, res) => {
   const { customerdata } = req.body;
+
   // Validate input
   if (!customerdata) {
     return res.status(400).json({ success: false, message: 'Invalid request, no data received' });
@@ -1107,7 +1108,7 @@ app.post('/api/deactivate-participant',async (req, res) => {
   try {
     // Check if the customer exists
     const [checkUser] = await db.query(
-      `SELECT * FROM sk_customer_credentials WHERE user_customerID = ?`,
+      `SELECT * FROM sk_participant_info WHERE user_customerID = ?`,
       [customerdata.customerID]
     );
 
