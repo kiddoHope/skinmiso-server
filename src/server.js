@@ -218,10 +218,19 @@ app.post('/api/admin/customer-list', authenticateToken, async (req,res) => {
     if (checkRole.length > 0) {
       const userData = checkRole[0]
       if (userData.user_role === 'admin') {
-        const [usersData] = await db.query("SELECT * FROM sk_customer_credentials WHERE user_region = ?", [region])
+        // const [usersData] = await db.query("SELECT * FROM sk_customer_credentials WHERE user_region = ?", [region])
         
+        const [usersData] = await db.query(`
+          SELECT 
+            sk_customer_credentials.user_customerID,
+            sk_customer_credentials.*,
+            sk_customer_info.*
+          FROM sk_customer_credentials
+          INNER JOIN sk_customer_info 
+            ON sk_customer_credentials.user_customerID = sk_customer_info.user_customerID COLLATE utf8mb4_unicode_ci
+        `); 
         if (usersData.length > 0) {
-          const cleanedData = usersData.map(({ id, user_customerID, user_password, user_referral, user_fb_connected, user_google_connected, user_loginSession, ...cleaned}) => cleaned)
+          const cleanedData = usersData.map(({ id, user_password, user_referral, user_fb_connected, user_google_connected, user_loginSession, ...cleaned}) => cleaned)
           return res.status(200).json({ success: true, message: "users data retrieved", users: cleanedData})
         } else {
           return res.status(404).json({ success:false, message: "No user found" })
@@ -1065,12 +1074,14 @@ app.post('/api/participant-list', async (req, res) => {
 
 app.post('/api/participant-approve',async (req, res) => {
   const { participant } = req.body;
-
+  console.log(participant);
+  
   if (!participant) {
     res.status(404).json({ success: false, message: "no data received"})
   }
 
   try {
+    const [checkParticipant] = await db.query(`SELECT * sk_participant_info WHERE user_customerID = ?`, [participant.customerID])
     
   } catch (error) {
     console.log(error);
