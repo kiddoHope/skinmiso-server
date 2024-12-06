@@ -1119,7 +1119,7 @@ app.post('/api/deactivate-participant',async (req, res) => {
       );
 
       if (updateUser.affectedRows > 0) {
-        return res.status(200).json({ success: true, message: "Customer successfully changed role" });
+        return res.status(200).json({ success: true, message: "participant successfully deactivated" });
       } else {
         return res.status(400).json({ success: false, message: "Error updating user" });
       }
