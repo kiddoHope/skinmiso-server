@@ -538,7 +538,7 @@ app.post('/api/customers', async (req,res) => {
     if (alldataUsers.length > 0) {
       const filterRegion = alldataUsers.filter(reg => reg.user_region === region)
     
-      const cleanData = filterRegion.map(({ id, user_email, user_mobileno, user_username, user_password, user_role, user_referral, user_region, user_fb_connected, user_google_connected, user_activity, user_loginSession, user_cover_photo, ...rest }) => rest)
+      const cleanData = filterRegion.map(({ id, user_mobileno, user_username, user_password, user_role, user_referral, user_region, user_fb_connected, user_google_connected, user_activity, user_loginSession, user_cover_photo, ...rest }) => rest)
 
       return res.status(200).json({ success: true, users: cleanData})
     } else {
@@ -1062,6 +1062,22 @@ app.post('/api/participant-list', async (req, res) => {
     return res.status(500).json({ success: false, message: "Unknown internal server error", error: error.message });
   }
 });
+
+app.post('/api/participant-approve',async (req, res) => {
+  const { participant } = req.body;
+
+  if (!participant) {
+    res.status(404).json({ success: false, message: "no data received"})
+  }
+
+  try {
+    
+  } catch (error) {
+    console.log(error);
+    
+  }
+
+})
 
 app.post('/api/participant-gt-post', async (req, res) => {
   const { region } = req.body;
