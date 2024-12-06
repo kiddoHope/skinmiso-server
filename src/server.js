@@ -1072,8 +1072,10 @@ app.post('/api/participant-list', async (req, res) => {
   }
 });
 
-app.post('/api/participant-approve',async (req, res) => {
+app.post('/api/participant-approve',upload.single("participantImg"),async (req, res) => {
+  const profileFile = req.file;
   const { participant } = req.body;
+  const imgName = participant.customerID + profileFile.originalname
   
   if (!participant) {
     res.status(404).json({ success: false, message: "no data received"})
@@ -1082,9 +1084,24 @@ app.post('/api/participant-approve',async (req, res) => {
   try {
     const [checkParticipant] = await db.query(`SELECT * FROM sk_participant_info WHERE user_customerID = ?`, [participant.customerID])
     if (checkParticipant.length > 0) {
-      const [updateParticipant] = await db.query(`UPDATE sk_participant_info SET user_participant_referral = ?, user_participant_approved = ?, user_participant_state = ? WHERE user_customerID = ?`, [participant.referral, participant.approved, participant.state, participant.customerID])
+      const [updateParticipant] = await db.query(`UPDATE sk_participant_info SET user_participant_referral = ?, user_participant_card_img = ?, user_participant_approved = ?, user_participant_state = ? WHERE user_customerID = ?`, [participant.referral, imgName,participant.approved, participant.state, participant.customerID])
       if (updateParticipant.affectedRows > 0) {
-        res.status(200).json({ success: true, message: 'participant updated successfully'})
+        
+        const formData = new FormData();
+        formData.append("participantImg", profileFile.buffer, { filename: imgName, contentType: profileFile.mimetype });
+
+        try {
+          const response = await axios.post("https://2wave.io/skinmiso/php/upload-participant-card.php", formData, {
+            headers: {
+              ...formData.getHeaders(), // Use getHeaders here for axios compatibility
+            },
+          });
+          if (response.data.status === 'success') {
+            res.status(200).json({ success: true, message: 'participant updated successfully'})
+          }
+        } catch (error) {
+          res.status(400).json({ success: false, message: "image not uploaded"})
+        }
       } else {
         res.status(400).json({ success: false, message: "info not completed"})
       }
@@ -1097,31 +1114,41 @@ app.post('/api/participant-approve',async (req, res) => {
   }
 })
 
-app.post('/api/update-customer-role', async (req,res) => {
-  const { role } = req.body;
-  console.log(role);
-
-  if (!role) {
-    res.status(400).json({ success:false, message: 'invalid request, no data received'})
+app.post('/api/update-customer-role', async (req, res) => {
+  const { customerdata } = req.body;
+  // Validate input
+  if (!customerdata) {
+    return res.status(400).json({ success: false, message: 'Invalid request, no data received' });
   }
 
   try {
-    const [checkUser] = await db.query(`SELECT * sk_customer_credentials WHERE user_customerID = ?`, [role.customerID])
-    console.log(checkUser);
+    // Check if the customer exists
+    const [checkUser] = await db.query(
+      `SELECT * FROM sk_customer_credentials WHERE user_customerID = ?`,
+      [customerdata.customerID]
+    );
+
     if (checkUser.length > 0) {
-      const [updateUser] = await db.query(`UPDATE sk_customer_credentials SET user_role = ? WHERE user_customerID`, [role.role, role.customerID])
+      // Update the customer's role
+      const [updateUser] = await db.query(
+        `UPDATE sk_customer_credentials SET user_role = ? WHERE user_customerID = ?`,
+        [customerdata.role, customerdata.customerID]
+      );
+
       if (updateUser.affectedRows > 0) {
-        res.status(200).json({ success: true, message: "customer successfully changed role"})
+        return res.status(200).json({ success: true, message: "Customer successfully changed role" });
       } else {
-        res.status(400).json({ success: false, message: "error updating user"})
+        return res.status(400).json({ success: false, message: "Error updating user" });
       }
     } else {
-      res.status(403).json({ success: false, message: "no participant found in that id"})
+      return res.status(403).json({ success: false, message: "No participant found with that ID" });
     }
   } catch (error) {
-    res.status(500).json({ success: false, message: "Internal server error", error: error})
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Internal server error", error });
   }
-})
+});
+
 
 app.post('/api/participant-gt-post', async (req, res) => {
   const { region } = req.body;
