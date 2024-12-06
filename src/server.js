@@ -1072,10 +1072,8 @@ app.post('/api/participant-list', async (req, res) => {
   }
 });
 
-app.post('/api/participant-approve',upload.single("participantImg"),async (req, res) => {
-  const profileFile = req.file;
+app.post('/api/participant-approve',async (req, res) => {
   const { participant } = req.body;
-  const imgName = participant.customerID + profileFile.originalname
   
   if (!participant) {
     res.status(404).json({ success: false, message: "no data received"})
@@ -1084,24 +1082,9 @@ app.post('/api/participant-approve',upload.single("participantImg"),async (req, 
   try {
     const [checkParticipant] = await db.query(`SELECT * FROM sk_participant_info WHERE user_customerID = ?`, [participant.customerID])
     if (checkParticipant.length > 0) {
-      const [updateParticipant] = await db.query(`UPDATE sk_participant_info SET user_participant_referral = ?, user_participant_card_img = ?, user_participant_approved = ?, user_participant_state = ? WHERE user_customerID = ?`, [participant.referral, imgName,participant.approved, participant.state, participant.customerID])
+      const [updateParticipant] = await db.query(`UPDATE sk_participant_info SET user_participant_referral = ?, user_participant_card_img = ?, user_participant_approved = ?, user_participant_state = ? WHERE user_customerID = ?`, [participant.referral, participant.imagename,participant.approved, participant.state, participant.customerID])
       if (updateParticipant.affectedRows > 0) {
-        
-        const formData = new FormData();
-        formData.append("participantImg", profileFile.buffer, { filename: imgName, contentType: profileFile.mimetype });
-
-        try {
-          const response = await axios.post("https://2wave.io/skinmiso/php/upload-participant-card.php", formData, {
-            headers: {
-              ...formData.getHeaders(), // Use getHeaders here for axios compatibility
-            },
-          });
-          if (response.data.status === 'success') {
-            res.status(200).json({ success: true, message: 'participant updated successfully'})
-          }
-        } catch (error) {
-          res.status(400).json({ success: false, message: "image not uploaded"})
-        }
+        res.status(200).json({ success: true, message: 'participant updated successfully'})
       } else {
         res.status(400).json({ success: false, message: "info not completed"})
       }
