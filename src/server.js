@@ -1099,17 +1099,30 @@ app.post('/api/participant-approve',async (req, res) => {
 
 app.post('/api/update-customer-role', async (req,res) => {
   const { role } = req.body;
+  console.log(role);
 
   if (!role) {
     res.status(400).json({ success:false, message: 'invalid request, no data received'})
   }
 
   try {
-    const [checkUser] = await db.query(`SELECT * sk_customer_credentials WHERE user_customerID = ?`)
+    const [checkUser] = await db.query(`SELECT * sk_customer_credentials WHERE user_customerID = ?`, [role.customerID])
+    console.log(checkUser);
+    if (checkUser.length > 0) {
+      const [updateUser] = await db.query(`UPDATE sk_customer_credentials SET user_role = ? WHERE user_customerID`, [role.role, role.customerID])
+      if (updateUser.affectedRows > 0) {
+        res.status(200).json({ success: true, message: "customer successfully changed role"})
+      } else {
+        res.status(400).json({ success: false, message: "error updating user"})
+      }
+    } else {
+      res.status(403).json({ success: false, message: "no participant found in that id"})
+    }
   } catch (error) {
-    
+    res.status(500).json({ success: false, message: "Internal server error", error: error})
   }
 })
+
 app.post('/api/participant-gt-post', async (req, res) => {
   const { region } = req.body;
 
