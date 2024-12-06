@@ -1114,7 +1114,7 @@ app.post('/api/deactivate-participant',async (req, res) => {
     if (checkUser.length > 0) {
       // Update the customer's role
       const [updateUser] = await db.query(
-        `UPDATE sk_customer_credentials SET user_role = ? WHERE user_customerID = ?`,
+        `UPDATE sk_participant_info SET user_participant_state = ? WHERE user_customerID = ?`,
         [customerdata.state, customerdata.customerID]
       );
 
